@@ -51,22 +51,24 @@ function connect() {
 		popup("No SSID selected");
 }
 function connectHandler(data) {
-	popup(data);
-	wifiStateInterval = setInterval(wifiState, 2000); //2 seconds
+	openPopup(data, 'i');
+	getWifiStateInterval = setInterval(getWifiState, 2000); //2 seconds
 }
 
-var wifiStateInterval;
-function wifiState() {
-	sendRequest("wifiState", wifiStateHandler);
+var getWifiStateInterval;
+function getWifiState() {
+	sendRequest("getWifiState", getWifiStateHandler);
 }
-function wifiStateHandler(data) {
+function getWifiStateHandler(data) {
 	var type = data.charAt(0);
-	data = data.replaceAt(0, '');
+	data = data.substr(1);
 
-	if (type == 'e' || type == 's')
-		clearInterval(wifiStateInterval);
-
-	popup(data, type);
+	if (type == 'e' || type == 's') {
+		clearInterval(getWifiStateInterval);
+		popup(data, type);
+	}
+	else
+		openPopup(data, type);
 }
 
 function sendRequest(addr, func=null) {
@@ -78,7 +80,7 @@ function sendRequest(addr, func=null) {
 		}
 	};
 	xhttp.onerror = function() {
-		clearInterval(wifiStateInterval);
+		clearInterval(getWifiStateInterval);
 		popup("Can't reach host");
 	};
 	xhttp.open("GET", addr, true);
@@ -95,6 +97,7 @@ function popup(text, type='e', duration=2500) {
 }
 function openPopup(text, type='e') {
 	var div = document.getElementById("popup");
+	div.className = "popup";
 	div.innerHTML = text;
 	if (type == 'e')
 		div.classList.add("error");

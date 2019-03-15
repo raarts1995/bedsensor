@@ -23,13 +23,25 @@
    but we only care about one event - are we connected
    to the AP with an IP? */
 #define WIFI_CONNECTED_BIT BIT0
+
+//raised when wifi_connect() is called
+//cleared event WIFI_STA_GOT_IP or WIFI_STA_DISCONNECTED
 #define WIFI_CONNECTING_BIT BIT1
+
+//raised when reconnect attempts > WIFI_MAX_CONNECT_RETRIES
+//cleared when wifi_connect() or wifi_disconnect() is called
 #define WIFI_CONNECTING_FAILED_BIT BIT2
 
+//raised when wifi_disconnect() is called and WIFI_CONNECTED_BIT was set
+//cleared on event WIFI_STA_DISCONNECTED
 #define WIFI_DISCONNECT_CALLED_BIT BIT3
 
-#define WIFI_SCAN_DONE_BIT BIT4
-#define WIFI_SCANNING_BIT BIT5
+//raised when wifi_startAP() is called
+//cleared when wifi_stopAP() is called
+#define WIFI_AP_ACTIVE BIT4
+
+#define WIFI_SCAN_DONE_BIT BIT5
+#define WIFI_SCANNING_BIT BIT6
 
 #define WIFI_MAX_CONNECT_RETRIES 3
 
@@ -45,13 +57,14 @@ void wifi_setStatusBit(EventBits_t bit);
 void wifi_clearStatusBit(EventBits_t bit);
 bool wifi_getStatusBit(EventBits_t bit);
 bool wifi_waitForStatusBit(EventBits_t bit, uint32_t timeout_ms);
+char *wifi_statusBitToString(EventBits_t bit);
 
 void wifi_init();
 void wifi_connect();
 void wifi_disconnect();
 wifiState_t wifi_connectState();
 esp_err_t wifi_connectSTA(char *ssid, char *pass);
-esp_err_t wifi_startAP(char *ssid, char *pass);
+esp_err_t wifi_startAP();
 void wifi_stopAP();
 
 void wifi_enableMode(wifi_mode_t newMode);

@@ -8,6 +8,7 @@ int16_t wifi_scanNetworks(bool async, bool showHidden, bool passive, uint32_t ms
 		ESP_LOGI(TAG, "WiFi scan already running");
 		return WIFI_SCAN_RUNNING;
 	}
+	wifi_setStatusBit(WIFI_SCANNING_BIT);
 	wifi_enableMode(WIFI_MODE_STA);
 
 	wifi_scan_config_t scanConfig;
@@ -26,7 +27,6 @@ int16_t wifi_scanNetworks(bool async, bool showHidden, bool passive, uint32_t ms
 
 	if (esp_wifi_scan_start(&scanConfig, false) == ESP_OK) {
 		wifi_clearStatusBit(WIFI_SCAN_DONE_BIT);
-		wifi_setStatusBit(WIFI_SCANNING_BIT);
 
 		if (async)
 			return WIFI_SCAN_RUNNING;
@@ -35,6 +35,7 @@ int16_t wifi_scanNetworks(bool async, bool showHidden, bool passive, uint32_t ms
 			return wifi_scanCount;
 	}
 
+	wifi_clearStatusBit(WIFI_SCANNING_BIT);
 	return WIFI_SCAN_FAILED;
 }
 

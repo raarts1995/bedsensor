@@ -31,7 +31,7 @@ char *server_setContentType(char *filename);
 esp_err_t server_getSSIDList(httpd_req_t *req);
 esp_err_t server_getCurrentSSID(httpd_req_t *req);
 esp_err_t server_connect(httpd_req_t *req);
-esp_err_t server_wifiState(httpd_req_t *req);
+esp_err_t server_getWifiState(httpd_req_t *req);
 esp_err_t server_sendFile(httpd_req_t *req);
 char *server_getUrlQuery(httpd_req_t *req);
 esp_err_t server_getArg(char *buf, char *key, char *value, size_t len);

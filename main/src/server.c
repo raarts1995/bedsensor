@@ -75,13 +75,13 @@ esp_err_t server_start() {
 	};
 	httpd_register_uri_handler(server, &connect);
 
-	httpd_uri_t wifiState = {
-		.uri = "wifiState",
+	httpd_uri_t getWifiState = {
+		.uri = "/getWifiState",
 		.method = HTTP_GET,
-		.handler = server_wifiState,
+		.handler = server_getWifiState,
 		.user_ctx = NULL
 	};
-	httpd_register_uri_handler(server, &wifiState);
+	httpd_register_uri_handler(server, &getWifiState);
 
 	httpd_uri_t sendFile = {
 		.uri = "/*",
@@ -96,6 +96,7 @@ esp_err_t server_start() {
 
 void server_stop() {
 	if (server) {
+		esp_vfs_spiffs_unregister(NULL);
 		httpd_stop(server);
 		server = NULL;
 	}
@@ -161,10 +162,10 @@ esp_err_t server_connect(httpd_req_t *req) {
 			ESP_LOGI(TAG, "pass: %s", pass);
 		}
 		if (ssid != NULL)  {//pass can be NULL for unprotected networks
-			wifi_connectSTA(ssid, pass);
 			httpd_resp_sendstr_chunk(req, "Attempting to connect to ");
 			httpd_resp_sendstr_chunk(req, ssid);
 			httpd_resp_sendstr_chunk(req, NULL);
+			wifi_connectSTA(ssid, pass);
 		}
 		else
 			httpd_resp_sendstr(req, "No SSID received");
@@ -177,7 +178,7 @@ esp_err_t server_connect(httpd_req_t *req) {
 	return ESP_OK;
 }
 
-esp_err_t server_wifiState(httpd_req_t *req) {
+esp_err_t server_getWifiState(httpd_req_t *req) {
 	switch (wifi_connectState()) {
 		case WIFI_STATE_DISCONNECTED:
 			httpd_resp_sendstr(req, "iDisconnected");

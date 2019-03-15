@@ -38,15 +38,16 @@ void app_main()
 		"test rtos timer", //timer name (not used by rtos)
 		1000/portTICK_PERIOD_MS, //tick period
 		pdTRUE, //autoreload
-		NULL, //timer ID to store the amount of times the timer expires (initializet to 0)
+		NULL, //timer ID
 		rtosTimerTest //callback function
 		);
 	if (xTimerStart(tmr, 0) != pdPASS)
 		ESP_LOGE(TAG, "Timer start error");
 	
 	wifi_init();
-	if (BS_WIFI_MODE_AP) {
-		wifi_startAP(BS_WIFI_SSID, BS_WIFI_PASS);
+
+	if (true) {
+		wifi_startAP();
 	}
 	else {
 		wifi_connectSTA(BS_WIFI_SSID, BS_WIFI_PASS);
