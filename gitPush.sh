@@ -6,5 +6,5 @@ fi
 echo "Commit message: $MSG"
 git add *
 git commit -m "$MSG"
-git push -u master origin
+git push -u origin master
 echo "Done"
