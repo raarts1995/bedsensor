@@ -1,8 +1,54 @@
 #include "server.h"
 
+TimerHandle_t server_timeoutTimer = NULL;
+
 httpd_handle_t server = NULL;
 
-/* Function to initialize SPIFFS */
+/*
+	Function which gets called when the timeout timer expires
+	Tries to connect to saved wifi network
+*/
+void server_timeoutFunction(TimerHandle_t tmr) {
+	ESP_LOGI(TAG, "AP 10 min without activity");
+}
+
+/*
+	Starts the server timeout timer
+	Should only be called when the server starts
+*/
+void server_startTimer() {
+	server_timeoutTimer = xTimerCreate(
+		"AP timeout", //timer name
+		SERVER_TIMEOUT/portTICK_PERIOD_MS, //timer period
+		pdFALSE, //autoreload
+		NULL, //timer ID
+		server_timeoutFunction //callback function
+		);
+	if (xTimerStart(server_timeoutTimer, 0) != pdPASS)
+		ESP_LOGE(TAG, "Failed to start timeout timer");
+}
+
+/*
+	Resets the timeout timer
+	Should be called everytime the configuration page sends something to the server
+*/
+void server_resetTimer() {
+	if (xTimerReset(server_timeoutTimer, 0) != pdPASS) 
+		ESP_LOGE(TAG, "Failed to reset timeout timer");
+}
+
+/*
+	Deletes the timeout timer
+	Should only be called when the server is stopped
+*/
+void server_deleteTimer() {
+	if (xTimerDelete(server_timeoutTimer, 0) != pdPASS)
+		ESP_LOGE(TAG, "Failed to delete timeout timer");
+}
+
+/*
+	Initializes the SPI Flash FileSystem which holds the configuration page
+*/
 esp_err_t initSpiffs(void) {
 	ESP_LOGI(TAG, "Initializing SPIFFS");
 
@@ -36,6 +82,10 @@ esp_err_t initSpiffs(void) {
 	return ESP_OK;
 }
 
+/*
+	Server initialization function
+	Initializes everything required for the server to function properly
+*/
 esp_err_t server_start() {
 	//start spiffs
 	ESP_ERROR_CHECK(initSpiffs());
@@ -91,18 +141,27 @@ esp_err_t server_start() {
 	};
 	httpd_register_uri_handler(server, &sendFile);
 
+	//start timeout timer
+	server_startTimer();
+
 	return ESP_OK;
 }
 
+/*
+	Stops the webserver
+*/
 void server_stop() {
 	if (server) {
+		server_deleteTimer();
 		esp_vfs_spiffs_unregister(NULL);
 		httpd_stop(server);
 		server = NULL;
 	}
 }
 
-/* Set HTTP response content type according to file extension */
+/* 
+	Return the HTTP response content type according to file extension 
+*/
 char *server_setContentType(char *filename) {
 	if (CHECK_FILE_EXT(filename, ".htm"))  {ESP_LOGI(TAG, "File type: .htm"); return "text/html";}
 	if (CHECK_FILE_EXT(filename, ".html")) {ESP_LOGI(TAG, "File type: .html");return "text/html";}
@@ -121,7 +180,11 @@ char *server_setContentType(char *filename) {
 	return "text/plain";
 }
 
+/*
+	Get a list of available SSIDs
+*/
 esp_err_t server_getSSIDList(httpd_req_t *req) {
+	server_resetTimer();
 	int16_t res = wifi_scanNetworks(0, 0, 0, 300);
 	if (res < 0) { //failed or running
 		ESP_LOGE(TAG, "Failed to scan WiFi networks");
@@ -144,12 +207,20 @@ esp_err_t server_getSSIDList(httpd_req_t *req) {
 	return ESP_OK;
 }
 
+/*
+	Get the currently configured SSID
+*/
 esp_err_t server_getCurrentSSID(httpd_req_t *req) {
+	server_resetTimer();
 	httpd_resp_sendstr(req, BS_WIFI_SSID);
 	return ESP_OK;
 }
 
+/*
+	Connect to the network given in the request parameters
+*/
 esp_err_t server_connect(httpd_req_t *req) {
+	server_resetTimer();
 	char *buf = server_getUrlQuery(req);
 	if (buf != NULL) {
 		ESP_LOGI(TAG, "URL query: %s", buf);
@@ -178,7 +249,12 @@ esp_err_t server_connect(httpd_req_t *req) {
 	return ESP_OK;
 }
 
+/*
+	Get the current connection state
+	Will be called repeatedly after server_connect() is called to track the connection state
+*/
 esp_err_t server_getWifiState(httpd_req_t *req) {
+	server_resetTimer();
 	switch (wifi_connectState()) {
 		case WIFI_STATE_DISCONNECTED:
 			httpd_resp_sendstr(req, "iDisconnected");
@@ -199,7 +275,11 @@ esp_err_t server_getWifiState(httpd_req_t *req) {
 	return ESP_OK;
 }
 
+/*
+	Send a file from the SPIFFS to the client or 404 if the file doesn't exist
+*/
 esp_err_t server_sendFile(httpd_req_t *req) {
+	server_resetTimer();
 	ESP_LOGI(TAG, "Requested: %s", req->uri);
 	
 	char filepath[SERVER_MAX_FILENAME];
@@ -297,6 +377,9 @@ esp_err_t server_getArg(char *buf, char *key, char *value, size_t len) {
 	return ESP_FAIL;
 }
 
+/*
+	Decodes a HTML encoded string
+*/
 void server_decodeURL(char *data, uint16_t strLen) {
 	uint16_t decPos = 0;
 	char tmp[] = "0x00";

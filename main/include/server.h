@@ -7,6 +7,8 @@
 #include <sys/param.h>
 #include <sys/unistd.h>
 
+#include "freertos/timers.h"
+
 #include "esp_err.h"
 #include "esp_log.h"
 
