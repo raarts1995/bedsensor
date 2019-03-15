@@ -1,0 +1,82 @@
+html {
+	padding-top: 70px;
+	font-family: Verdana, sans-serif;
+}
+
+.head {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	padding: 10px 0px;
+	text-align: center;
+	font-size: 30px;
+	font-weight: bold;
+	color: #fff;
+	background-color: #444;
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: auto auto;
+	grid-column-gap: 10px;
+	grid-row-gap: 10px;
+}
+@media screen and (max-width: 750px) {
+	.grid {
+		grid-template-columns: auto;
+	}
+}
+
+table {
+	width: 100%;
+	margin: auto;
+	max-width: 500px;
+	border: 1px solid #000;
+	border-collapse: collapse;
+}
+th, td {
+	padding: 5px;
+}
+th {
+	background-color: #C42026;
+	color: #fff;
+}
+tr {
+	height: 42px;
+}
+input, select {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 2px 5px;
+	border: 1px solid #aaa;
+}
+
+.popup {
+	position: fixed;
+	bottom: 0px;
+	left: 0px;
+	width: 100%;
+	text-align: center;
+	padding: 20px 0px;
+	background-color: #000;
+	color: #000;
+	font-weight: bold;
+	font-size: 20px;
+	transition-duration: 0.5s;
+	transform: scale(1,0);
+	transform-origin: bottom;
+}
+.popup.open {
+	color: #fff;
+	transform: scale(1,1);
+}
+.popup.error {
+	background-color: #f00;
+}
+.popup.info {
+	background-color: #aaa;
+}
+.popup.success {
+	background-color: #0f0;
+}

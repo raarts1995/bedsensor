@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" type="text/css" href="style.css">
+		<link rel="icon" type="image/x-icon" href="favicon.ico">
+		<script src="script.js"></script>
+		<title>Bedsensor</title>
+	</head>
+	<body>
+		<div class="head">
+			Bedsensor
+		</div>
+		
+		<div class="grid">
+			<div>
+				<table>
+					<thead>
+						<tr><th colspan="2">WiFi settings</th></tr>
+					</thead>
+					<tbody>
+						<tr><td>SSID</td><td>
+							<select id="ssid"><option value="0">-</option></select><br>
+							<button onclick="getSSIDList()">Refresh</button>
+						</td></tr>
+						<tr><td>Password</td><td><input type="password" id="pass"></td></tr>
+						<tr><td colspan="2"><button onclick="connect()">Connect</button></td></tr>
+					</tbody>
+				</table>
+			</div>
+			<div>
+				<table>
+					<thead>
+						<tr><th colspan="2">Current network configuration</th></tr>
+					</thead>
+					<tbody>
+						<tr><td>SSID</td><td><input type="text" id="curSsid" value="-" disabled></td></tr>
+						<tr><td>Connection state</td><td><input type="text" id="curState" value="-" disabled></td></tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<div id="popup" class="popup"></div>
+	</body>
+</html>
