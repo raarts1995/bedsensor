@@ -1,18 +1,21 @@
 #include "wifi.h"
 
+char wifi_ssid[WIFI_MAX_SSID_LEN];
+char wifi_pass[WIFI_MAX_PASS_LEN];
+
 /* FreeRTOS event group to signal when we are connected*/
 EventGroupHandle_t wifiEventGroup;
 
 uint16_t wifi_connectRetries = 0;
 
-esp_err_t wifi_eventHandler(void *ctx, system_event_t *event) {
+esp_err_t wifi_eventHandler(void* ctx, system_event_t* event) {
 	switch(event->event_id) {
 		//STA events
 		case SYSTEM_EVENT_STA_START:
 			ESP_LOGI(TAG, "event sta start");
-			if (!(wifi_getStatusBit(WIFI_SCANNING_BIT)))
+			/*if (!(wifi_getStatusBit(WIFI_SCANNING_BIT)))
 				wifi_connect();
-			break;
+			break;*/
 		case SYSTEM_EVENT_STA_GOT_IP:
 			ESP_LOGI(TAG, "event got ip: %s",
 					 ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
@@ -89,7 +92,7 @@ bool wifi_waitForStatusBit(EventBits_t bit, uint32_t timeout_ms) {
 	return false;
 }
 
-char *wifi_statusBitToString(EventBits_t bit) {
+char* wifi_statusBitToString(EventBits_t bit) {
 	switch (bit) {
 		case WIFI_CONNECTED_BIT:
 			return "WIFI_CONNECTED_BIT";
@@ -110,6 +113,9 @@ char *wifi_statusBitToString(EventBits_t bit) {
 	}
 }
 
+/*
+	Initializes the wifi driver and lastly the nvs storage
+*/
 void wifi_init() {
 	wifiEventGroup = xEventGroupCreate();
 
@@ -120,6 +126,47 @@ void wifi_init() {
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
+
+	if (wifi_getWifiSettings()) {
+		wifi_connectSTA();
+	}
+	else {
+		ESP_LOGI(TAG, "No wifi settings known");
+		wifi_startAP();
+	}
+}
+
+/*
+	retrieve the stored wifi settings from the nvs storage
+	returns true if settings are found, otherwise false
+*/
+bool wifi_getWifiSettings() {
+	nvsStorage_getString("ssid", wifi_ssid, sizeof(wifi_ssid));
+	nvsStorage_getString("pass", wifi_pass, sizeof(wifi_pass));
+	if (strlen(wifi_ssid) == 0)
+		return false;
+	nvsStorage_getString("pass", wifi_pass, sizeof(wifi_pass));
+	ESP_LOGI(TAG, "Retrieved WiFi settings: ssid: '%s', pass: '%s'", wifi_ssid, wifi_pass);
+	return true;
+}
+
+/*
+	store wifi settings in the nvs storage
+*/
+void wifi_setWifiSettings(char* ssid, char* pass) {
+	strcpy(wifi_ssid, ssid);
+	strcpy(wifi_pass, pass);
+	nvsStorage_setString("ssid", wifi_ssid);
+	nvsStorage_setString("pass", wifi_pass);
+	ESP_LOGI(TAG, "Storing WiFi settings: ssid: '%s', pass: '%s'", wifi_ssid, wifi_pass);
+}
+
+/*
+	Returns the ssid stored in the nvs memory
+	Is retrieved by wifi_getWifiSettings() which is called in wifi_init()
+*/
+char* wifi_getStoredSSID() {
+	return wifi_ssid;
 }
 
 /*
@@ -187,19 +234,19 @@ wifiState_t wifi_connectState() {
 	return WIFI_STATE_DISCONNECTED;
 }
 
-esp_err_t wifi_connectSTA(char *ssid, char *pass) {
+esp_err_t wifi_connectSTA() {
 	ESP_LOGI(TAG, "Starting STA");
 	if (wifi_getStatusBit(WIFI_CONNECTED_BIT))
 		wifi_disconnect();
 
 	wifi_config_t wifiConfig = {};
-	strcpy((char *)wifiConfig.sta.ssid, ssid);
-	strcpy((char *)wifiConfig.sta.password, pass);
+	strcpy((char*)wifiConfig.sta.ssid, wifi_ssid);
+	strcpy((char*)wifiConfig.sta.password, wifi_pass);
 	wifi_enableMode(WIFI_MODE_STA);
 	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifiConfig));
 	esp_err_t err = esp_wifi_start();
 	if (err == ESP_OK) {
-		ESP_LOGI(TAG, "WiFi started in STA mode. SSID: '%s', pass: '%s'", ssid, pass);
+		ESP_LOGI(TAG, "WiFi started in STA mode. SSID: '%s', pass: '%s'", wifi_ssid, wifi_pass);
 		wifi_connect();
 	}
 	else

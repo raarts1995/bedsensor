@@ -21,7 +21,6 @@
 
 #include "config.h"
 #include "wifi.h"
-#include "server.h"
 #include "nvsStorage.h"
 
 
@@ -34,7 +33,7 @@ void app_main()
 {
 	nvsStorage_init();
 
-	TimerHandle_t tmr = xTimerCreate(
+	/*TimerHandle_t tmr = xTimerCreate(
 		"test rtos timer", //timer name (not used by rtos)
 		1000/portTICK_PERIOD_MS, //tick period
 		pdTRUE, //autoreload
@@ -42,14 +41,8 @@ void app_main()
 		rtosTimerTest //callback function
 		);
 	if (xTimerStart(tmr, 0) != pdPASS)
-		ESP_LOGE(TAG, "Timer start error");
-	
+		ESP_LOGE(TAG, "Timer start error");*/
+
 	wifi_init();
 
-	if (true) {
-		wifi_startAP();
-	}
-	else {
-		wifi_connectSTA(BS_WIFI_SSID, BS_WIFI_PASS);
-	}
 }

@@ -1,7 +1,7 @@
 #include "wifiScan.h"
 
 uint16_t wifi_scanCount = 0;
-wifi_ap_record_t *wifi_scanResult;
+wifi_ap_record_t* wifi_scanResult;
 
 int16_t wifi_scanNetworks(bool async, bool showHidden, bool passive, uint32_t msPerChannel) {
 	if (wifi_getStatusBit(WIFI_SCANNING_BIT)) {
@@ -70,18 +70,18 @@ void wifi_clearScanResults() {
 	wifi_clearStatusBit(WIFI_SCAN_DONE_BIT);
 }
 
-wifi_ap_record_t *wifi_getScanInfoByIndex(uint16_t i) {
+wifi_ap_record_t* wifi_getScanInfoByIndex(uint16_t i) {
 	if ((wifi_scanResult == NULL) || (i >= wifi_scanCount))
 		return NULL;
 	return &wifi_scanResult[i];
 }
 
-bool wifi_getNetworkInfo(uint16_t i, char **ssid, uint8_t *encType, int32_t *rssi, uint8_t **bssid, int32_t *channel) {
-	wifi_ap_record_t *r = wifi_getScanInfoByIndex(i);
+bool wifi_getNetworkInfo(uint16_t i, char** ssid, uint8_t* encType, int32_t* rssi, uint8_t** bssid, int32_t* channel) {
+	wifi_ap_record_t* r = wifi_getScanInfoByIndex(i);
 	if (r == NULL)
 		return false;
 
-	*ssid = (char *)r->ssid;
+	*ssid = (char*)r->ssid;
 	*encType = r->authmode;
 	*rssi = r->rssi;
 	*bssid = r->bssid;
@@ -89,36 +89,36 @@ bool wifi_getNetworkInfo(uint16_t i, char **ssid, uint8_t *encType, int32_t *rss
 	return true;
 }
 
-char *wifi_SSID(uint16_t i) {
-	wifi_ap_record_t *r = wifi_getScanInfoByIndex(i);
+char* wifi_SSID(uint16_t i) {
+	wifi_ap_record_t* r = wifi_getScanInfoByIndex(i);
 	if (r == NULL)
 		return NULL;
-	return (char *)r->ssid;
+	return (char*)r->ssid;
 }
 
 wifi_auth_mode_t wifi_encryptionType(uint16_t i) {
-	wifi_ap_record_t *r = wifi_getScanInfoByIndex(i);
+	wifi_ap_record_t* r = wifi_getScanInfoByIndex(i);
 	if (r == NULL)
 		return false;
 	return r->authmode;
 }
 
 int32_t wifi_RSSI(uint16_t i) {
-	wifi_ap_record_t *r = wifi_getScanInfoByIndex(i);
+	wifi_ap_record_t* r = wifi_getScanInfoByIndex(i);
 	if (r == NULL)
 		return false;
 	return r->rssi;
 }
 
-uint8_t *wifi_BSSID(uint16_t i) {
-	wifi_ap_record_t *r = wifi_getScanInfoByIndex(i);
+uint8_t* wifi_BSSID(uint16_t i) {
+	wifi_ap_record_t* r = wifi_getScanInfoByIndex(i);
 	if (r == NULL)
 		return false;
 	return r->bssid;
 }
 
 int32_t wifi_channel(uint16_t i) {
-	wifi_ap_record_t *r = wifi_getScanInfoByIndex(i);
+	wifi_ap_record_t* r = wifi_getScanInfoByIndex(i);
 	if (r == NULL)
 		return false;
 	return r->primary;

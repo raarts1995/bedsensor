@@ -10,6 +10,14 @@ httpd_handle_t server = NULL;
 */
 void server_timeoutFunction(TimerHandle_t tmr) {
 	ESP_LOGI(TAG, "AP 10 min without activity");
+	if (!wifi_getWifiSettings()) {
+		ESP_LOGI(TAG, "No settings stored.  Keeping AP active");
+		server_resetTimer();
+		return;
+	}
+
+	//retry to connect to sta
+	wifi_connectSTA();
 }
 
 /*
@@ -162,7 +170,7 @@ void server_stop() {
 /* 
 	Return the HTTP response content type according to file extension 
 */
-char *server_setContentType(char *filename) {
+char* server_setContentType(char* filename) {
 	if (CHECK_FILE_EXT(filename, ".htm"))  {ESP_LOGI(TAG, "File type: .htm"); return "text/html";}
 	if (CHECK_FILE_EXT(filename, ".html")) {ESP_LOGI(TAG, "File type: .html");return "text/html";}
 	if (CHECK_FILE_EXT(filename, ".css"))  {ESP_LOGI(TAG, "File type: .css"); return "text/css";}
@@ -183,7 +191,7 @@ char *server_setContentType(char *filename) {
 /*
 	Get a list of available SSIDs
 */
-esp_err_t server_getSSIDList(httpd_req_t *req) {
+esp_err_t server_getSSIDList(httpd_req_t* req) {
 	server_resetTimer();
 	int16_t res = wifi_scanNetworks(0, 0, 0, 300);
 	if (res < 0) { //failed or running
@@ -194,7 +202,7 @@ esp_err_t server_getSSIDList(httpd_req_t *req) {
 	ESP_LOGI(TAG, "Networks scanned: found %d networks", res);
 	int sent = 0;
 	for (int i = 0; i < res; i++) {
-		char *ssid = wifi_SSID(i);
+		char* ssid = wifi_SSID(i);
 		ESP_LOGI(TAG, "SSID %d: %s", i+1, (strcmp(ssid, "") == 0 ? "(empty)" : ssid));
 		if (strcmp(ssid, "") != 0) { //filter out empty ssid names
 			if (sent != 0)
@@ -210,22 +218,26 @@ esp_err_t server_getSSIDList(httpd_req_t *req) {
 /*
 	Get the currently configured SSID
 */
-esp_err_t server_getCurrentSSID(httpd_req_t *req) {
+esp_err_t server_getCurrentSSID(httpd_req_t* req) {
 	server_resetTimer();
-	httpd_resp_sendstr(req, BS_WIFI_SSID);
+	char* ssid = wifi_getStoredSSID();
+	if (strlen(ssid) == 0)
+		httpd_resp_sendstr(req, "-");
+	else
+		httpd_resp_sendstr(req, ssid);
 	return ESP_OK;
 }
 
 /*
 	Connect to the network given in the request parameters
 */
-esp_err_t server_connect(httpd_req_t *req) {
+esp_err_t server_connect(httpd_req_t* req) {
 	server_resetTimer();
-	char *buf = server_getUrlQuery(req);
+	char* buf = server_getUrlQuery(req);
 	if (buf != NULL) {
 		ESP_LOGI(TAG, "URL query: %s", buf);
-		char ssid[32];
-		char pass[32];
+		char ssid[WIFI_MAX_SSID_LEN];
+		char pass[WIFI_MAX_PASS_LEN];
 		if (server_getArg(buf, "ssid", ssid, sizeof(ssid)) == ESP_OK) {
 			ESP_LOGI(TAG, "ssid: %s", ssid);
 		}
@@ -236,7 +248,9 @@ esp_err_t server_connect(httpd_req_t *req) {
 			httpd_resp_sendstr_chunk(req, "Attempting to connect to ");
 			httpd_resp_sendstr_chunk(req, ssid);
 			httpd_resp_sendstr_chunk(req, NULL);
-			wifi_connectSTA(ssid, pass);
+
+			wifi_setWifiSettings(ssid, pass);
+			wifi_connectSTA();
 		}
 		else
 			httpd_resp_sendstr(req, "No SSID received");
@@ -253,7 +267,7 @@ esp_err_t server_connect(httpd_req_t *req) {
 	Get the current connection state
 	Will be called repeatedly after server_connect() is called to track the connection state
 */
-esp_err_t server_getWifiState(httpd_req_t *req) {
+esp_err_t server_getWifiState(httpd_req_t* req) {
 	server_resetTimer();
 	switch (wifi_connectState()) {
 		case WIFI_STATE_DISCONNECTED:
@@ -278,25 +292,25 @@ esp_err_t server_getWifiState(httpd_req_t *req) {
 /*
 	Send a file from the SPIFFS to the client or 404 if the file doesn't exist
 */
-esp_err_t server_sendFile(httpd_req_t *req) {
+esp_err_t server_sendFile(httpd_req_t* req) {
 	server_resetTimer();
 	ESP_LOGI(TAG, "Requested: %s", req->uri);
 	
 	char filepath[SERVER_MAX_FILENAME];
-	FILE *fd = NULL;
+	FILE* fd = NULL;
 	struct stat file_stat;
 
-	/* Retrieve the base path of file storage to construct the full path */
+	/* Retrieve the base path of file storage to construct the full path*/
 	strcpy(filepath, SERVER_BASEPATH);
 
-	/* Concatenate the requested file path */
+	/* Concatenate the requested file path*/
 	strcat(filepath, req->uri);
 	if (strcmp(req->uri, "/") == 0)
 		strcat(filepath, "index.html");
 
 	if (stat(filepath, &file_stat) == -1) {
 		ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
-		/* Respond with 404 Not Found */
+		/* Respond with 404 Not Found*/
 		httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
 		return ESP_FAIL;
 	}
@@ -304,7 +318,7 @@ esp_err_t server_sendFile(httpd_req_t *req) {
 	fd = fopen(filepath, "r");
 	if (!fd) {
 		ESP_LOGE(TAG, "Failed to read existing file : %s", filepath);
-		/* Respond with 500 Internal Server Error */
+		/* Respond with 500 Internal Server Error*/
 		httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
 		return ESP_FAIL;
 	}
@@ -312,9 +326,9 @@ esp_err_t server_sendFile(httpd_req_t *req) {
 	ESP_LOGI(TAG, "Sending file : %s (%ld bytes)...", filepath, file_stat.st_size);
 	httpd_resp_set_type(req, server_setContentType(filepath));
 
-	/* Retrieve the pointer to scratch buffer for temporary storage */
+	/* Retrieve the pointer to scratch buffer for temporary storage*/
 	size_t tempSize = 4096;
-	char *chunk = (char *)malloc(tempSize*sizeof(char));
+	char* chunk = (char*)malloc(tempSize*sizeof(char));
 	size_t chunkSize = 0;
 	if (chunk == NULL) {
 		ESP_LOGE(TAG, "Malloc failed. Can't send file");
@@ -322,29 +336,29 @@ esp_err_t server_sendFile(httpd_req_t *req) {
 		return ESP_ERR_NO_MEM;
 	}
 	do {
-		/* Read file in chunks into the scratch buffer */
+		/* Read file in chunks into the scratch buffer*/
 		chunkSize = fread(chunk, 1, tempSize, fd);
 		ESP_LOGI(TAG, "Sending chunk containing %u bytes", chunkSize);
 
-		/* Send the buffer contents as HTTP response chunk */
+		/* Send the buffer contents as HTTP response chunk*/
 		if (httpd_resp_send_chunk(req, chunk, chunkSize) != ESP_OK) {
 			fclose(fd);
 			ESP_LOGE(TAG, "File sending failed!");
-			/* Abort sending file */
+			/* Abort sending file*/
 			httpd_resp_sendstr_chunk(req, NULL);
-			/* Respond with 500 Internal Server Error */
+			/* Respond with 500 Internal Server Error*/
 			httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
 			return ESP_FAIL;
 		}
 
-		/* Keep looping till the whole file is sent */
+		/* Keep looping till the whole file is sent*/
 	} while (chunkSize != 0);
 
-	/* Close file after sending complete */
+	/* Close file after sending complete*/
 	fclose(fd);
 	ESP_LOGI(TAG, "File sending complete");
 
-	/* Respond with an empty chunk to signal HTTP response completion */
+	/* Respond with an empty chunk to signal HTTP response completion*/
 	httpd_resp_sendstr_chunk(req, NULL);
 	return ESP_OK;
 }
@@ -354,9 +368,9 @@ esp_err_t server_sendFile(httpd_req_t *req) {
 	The buffer needs to be freed using free() when done
 	Returns a pointer when the data is successfully retrieved, otherwise NULL
 */
-char *server_getUrlQuery(httpd_req_t *req) {
+char* server_getUrlQuery(httpd_req_t* req) {
 	uint16_t bufSize = httpd_req_get_url_query_len(req) + 1; //length + 1 for '\0'
-	char *buf = (char *)malloc(bufSize*sizeof(char));
+	char* buf = (char*)malloc(bufSize*sizeof(char));
 	if (httpd_req_get_url_query_str(req, buf, bufSize) == ESP_OK)
 		return buf;
 	return NULL;
@@ -366,7 +380,7 @@ char *server_getUrlQuery(httpd_req_t *req) {
 	Retrieves the given key from the given buffer and decodes it
 	Returns ESP_OK on success, otherwise ESP_FAIL
 */
-esp_err_t server_getArg(char *buf, char *key, char *value, size_t len) {
+esp_err_t server_getArg(char* buf, char* key, char* value, size_t len) {
 	if (!buf)
 		return ESP_FAIL;
 	
@@ -380,7 +394,7 @@ esp_err_t server_getArg(char *buf, char *key, char *value, size_t len) {
 /*
 	Decodes a HTML encoded string
 */
-void server_decodeURL(char *data, uint16_t strLen) {
+void server_decodeURL(char* data, uint16_t strLen) {
 	uint16_t decPos = 0;
 	char tmp[] = "0x00";
 	for (uint16_t i = 0; i < strLen; i++) {

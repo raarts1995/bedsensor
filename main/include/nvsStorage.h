@@ -11,7 +11,7 @@
 
 esp_err_t nvsStorage_init();
 esp_err_t nvsStorage_open();
-esp_err_t nvsStorage_getString(char *key, char *value);
-esp_err_t nvsStorage_setString(char *key, char *value);
+esp_err_t nvsStorage_getString(char* key, char* value, size_t len);
+esp_err_t nvsStorage_setString(char* key, char* value);
 
 #endif

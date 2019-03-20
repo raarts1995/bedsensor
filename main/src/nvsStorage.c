@@ -1,6 +1,7 @@
 #include "nvsStorage.h"
 
 nvs_handle bsNvs;
+bool nvsStorage_opened = false;
 
 esp_err_t nvsStorage_init() {
 	//Initialize NVS
@@ -23,13 +24,20 @@ void nvsStorage_close() {
 	nvs_close(bsNvs);
 }
 
-esp_err_t nvsStorage_getString(char *key, char *value) {
-	size_t strLength = 0;
-	return nvs_get_str(bsNvs, key, value, &strLength);
+esp_err_t nvsStorage_getString(char* key, char* value, size_t len) {
+	if (!nvsStorage_opened) {
+		nvsStorage_opened = true;
+		nvsStorage_open();
+	}
+	return nvs_get_str(bsNvs, key, value, &len);
 	
 }
 
-esp_err_t nvsStorage_setString(char *key, char *value) {
+esp_err_t nvsStorage_setString(char* key, char* value) {
+	if (!nvsStorage_opened) {
+		nvsStorage_opened = true;
+		nvsStorage_open();
+	}
 	esp_err_t err = nvs_set_str(bsNvs, key, value);
 	if (err == ESP_OK)
 		return nvs_commit(bsNvs);
