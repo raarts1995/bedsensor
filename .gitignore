@@ -1,3 +1,4 @@
-#ignore build folder
+#ignore folders
 build/
+aws_certificaten/
 
