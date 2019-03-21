@@ -1,4 +1,5 @@
 #include "gpio.h"
+#define TAG "GPIO"
 
 TimerHandle_t gpio_timer;
 

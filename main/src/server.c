@@ -1,4 +1,5 @@
 #include "server.h"
+#define TAG "Server"
 
 TimerHandle_t server_timeoutTimer = NULL;
 
@@ -55,49 +56,10 @@ void server_deleteTimer() {
 }
 
 /*
-	Initializes the SPI Flash FileSystem which holds the configuration page
-*/
-esp_err_t initSpiffs(void) {
-	ESP_LOGI(TAG, "Initializing SPIFFS");
-
-	esp_vfs_spiffs_conf_t conf = {
-	  .base_path = SERVER_BASEPATH,
-	  .partition_label = NULL,
-	  .max_files = 5,   // This decides the maximum number of files that can be created on the storage
-	  .format_if_mount_failed = true
-	};
-
-	esp_err_t ret = esp_vfs_spiffs_register(&conf);
-	if (ret != ESP_OK) {
-		if (ret == ESP_FAIL) {
-			ESP_LOGE(TAG, "Failed to mount or format filesystem");
-		} else if (ret == ESP_ERR_NOT_FOUND) {
-			ESP_LOGE(TAG, "Failed to find SPIFFS partition");
-		} else {
-			ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
-		}
-		return ESP_FAIL;
-	}
-
-	size_t total = 0, used = 0;
-	ret = esp_spiffs_info(NULL, &total, &used);
-	if (ret != ESP_OK) {
-		ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
-		return ESP_FAIL;
-	}
-
-	ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
-	return ESP_OK;
-}
-
-/*
 	Server initialization function
 	Initializes everything required for the server to function properly
 */
 esp_err_t server_start() {
-	//start spiffs
-	ESP_ERROR_CHECK(initSpiffs());
-
 	httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
 	config.uri_match_fn = httpd_uri_match_wildcard;
@@ -161,7 +123,6 @@ esp_err_t server_start() {
 void server_stop() {
 	if (server) {
 		server_deleteTimer();
-		esp_vfs_spiffs_unregister(NULL);
 		httpd_stop(server);
 		server = NULL;
 	}
@@ -296,69 +257,63 @@ esp_err_t server_sendFile(httpd_req_t* req) {
 	server_resetTimer();
 	ESP_LOGI(TAG, "Requested: %s", req->uri);
 	
-	char filepath[SERVER_MAX_FILENAME];
-	FILE* fd = NULL;
-	struct stat file_stat;
+	char filepath[SPIFFS_MAX_FILENAME];
 
-	/* Retrieve the base path of file storage to construct the full path*/
-	strcpy(filepath, SERVER_BASEPATH);
-
-	/* Concatenate the requested file path*/
-	strcat(filepath, req->uri);
+	//concatenate the requested file path
+	strcpy(filepath, req->uri);
 	if (strcmp(req->uri, "/") == 0)
 		strcat(filepath, "index.html");
 
-	if (stat(filepath, &file_stat) == -1) {
-		ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
-		/* Respond with 404 Not Found*/
+	if (!spiffs_fileExists(filepath)) {
+		ESP_LOGE(TAG, "File '%s' does not exist", filepath);
 		httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
 		return ESP_FAIL;
 	}
 
-	fd = fopen(filepath, "r");
-	if (!fd) {
+	if (!spiffs_openFile(filepath)) {
 		ESP_LOGE(TAG, "Failed to read existing file : %s", filepath);
-		/* Respond with 500 Internal Server Error*/
 		httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
 		return ESP_FAIL;
 	}
 
-	ESP_LOGI(TAG, "Sending file : %s (%ld bytes)...", filepath, file_stat.st_size);
+	ESP_LOGI(TAG, "Sending file : %s (%u bytes)...", filepath, spiffs_getFileSize(filepath));
 	httpd_resp_set_type(req, server_setContentType(filepath));
 
-	/* Retrieve the pointer to scratch buffer for temporary storage*/
-	size_t tempSize = 4096;
-	char* chunk = (char*)malloc(tempSize*sizeof(char));
-	size_t chunkSize = 0;
+	//retrieve the pointer to scratch buffer for temporary storage
+	size_t maxChunkSize = 4096;
+	char* chunk = (char*)malloc(maxChunkSize*sizeof(char));
 	if (chunk == NULL) {
 		ESP_LOGE(TAG, "Malloc failed. Can't send file");
-		httpd_resp_sendstr_chunk(req, NULL);
+		httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to allocate memory");
 		return ESP_ERR_NO_MEM;
 	}
+
+	size_t chunkSize;
 	do {
-		/* Read file in chunks into the scratch buffer*/
-		chunkSize = fread(chunk, 1, tempSize, fd);
+		//read file in chunks into the scratch buffer
+		chunkSize = spiffs_readFile(chunk, maxChunkSize);
 		ESP_LOGI(TAG, "Sending chunk containing %u bytes", chunkSize);
 
-		/* Send the buffer contents as HTTP response chunk*/
+		//send the buffer contents as HTTP response chunk
 		if (httpd_resp_send_chunk(req, chunk, chunkSize) != ESP_OK) {
-			fclose(fd);
+			spiffs_closeFile();
 			ESP_LOGE(TAG, "File sending failed!");
-			/* Abort sending file*/
+			//abort sending file
 			httpd_resp_sendstr_chunk(req, NULL);
-			/* Respond with 500 Internal Server Error*/
+
+			//respond with 500 Internal Server Error
 			httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
 			return ESP_FAIL;
 		}
 
-		/* Keep looping till the whole file is sent*/
+		//keep looping till the whole file is sent
 	} while (chunkSize != 0);
 
-	/* Close file after sending complete*/
-	fclose(fd);
+	//close file after sending complete
+	spiffs_closeFile();
 	ESP_LOGI(TAG, "File sending complete");
 
-	/* Respond with an empty chunk to signal HTTP response completion*/
+	//respond with an empty chunk to signal HTTP response completion
 	httpd_resp_sendstr_chunk(req, NULL);
 	return ESP_OK;
 }

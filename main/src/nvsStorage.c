@@ -1,4 +1,5 @@
 #include "nvsStorage.h"
+#define TAG "NvsStorage"
 
 nvs_handle bsNvs;
 bool nvsStorage_opened = false;
@@ -10,8 +11,10 @@ bool nvsStorage_opened = false;
 */
 esp_err_t nvsStorage_init() {
 	//Initialize NVS
+	ESP_LOGI(TAG, "Initializing NVS storage");
 	esp_err_t ret = nvs_flash_init();
 	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+		ESP_LOGI(TAG, "Failed to init. Erasing and retrying");
 		ESP_ERROR_CHECK(nvs_flash_erase());
 		ret = nvs_flash_init();
 	}

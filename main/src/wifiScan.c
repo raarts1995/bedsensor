@@ -1,4 +1,5 @@
 #include "wifiScan.h"
+#define TAG "WifiScan"
 
 uint16_t wifi_scanCount = 0;
 wifi_ap_record_t* wifi_scanResult;

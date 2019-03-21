@@ -1,4 +1,5 @@
 #include "wifi.h"
+#define TAG "Wifi"
 
 char wifi_ssid[WIFI_MAX_SSID_LEN];
 char wifi_pass[WIFI_MAX_PASS_LEN];
