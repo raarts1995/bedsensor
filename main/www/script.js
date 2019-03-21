@@ -66,6 +66,7 @@ function getWifiStateHandler(data) {
 	if (type == 'e' || type == 's') {
 		clearInterval(getWifiStateInterval);
 		popup(data, type);
+		getCurrentSSID();
 	}
 	else
 		openPopup(data, type);

@@ -3,6 +3,11 @@
 nvs_handle bsNvs;
 bool nvsStorage_opened = false;
 
+/*
+	Initializes the nvs storage
+	Returns ESP_OK on success
+			the error status on failure
+*/
 esp_err_t nvsStorage_init() {
 	//Initialize NVS
 	esp_err_t ret = nvs_flash_init();
@@ -13,17 +18,30 @@ esp_err_t nvsStorage_init() {
 	return ret;
 }
 
+/*
+	Opens the nvs storage handle
+	Returns ESP_OK on success
+			the error status on failure
+*/
 esp_err_t nvsStorage_open() {
 	ESP_LOGI(TAG, "Opening nvs handle");
 	//opening nvs using TAG name
 	return nvs_open(TAG, NVS_READWRITE, &bsNvs);
 }
 
+/*
+	Closes the nvs storage handle
+*/
 void nvsStorage_close() {
 	ESP_LOGI(TAG, "Closing nvs handle");
 	nvs_close(bsNvs);
 }
 
+/*
+	Opens the nvs storage handle if this hasn't been done already and gets the requested value
+	Returns ESP_OK on success
+			the error status on failure
+*/
 esp_err_t nvsStorage_getString(char* key, char* value, size_t len) {
 	if (!nvsStorage_opened) {
 		nvsStorage_opened = true;
@@ -33,6 +51,11 @@ esp_err_t nvsStorage_getString(char* key, char* value, size_t len) {
 	
 }
 
+/*
+	Opens the nvs storage handle if this hasn't been done already and stores the given value
+	Returns ESP_OK on success
+			the error status on failure
+*/
 esp_err_t nvsStorage_setString(char* key, char* value) {
 	if (!nvsStorage_opened) {
 		nvsStorage_opened = true;

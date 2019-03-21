@@ -18,6 +18,7 @@
 #include "wifiScan.h"
 #include "server.h"
 #include "nvsStorage.h"
+#include "gpio.h"
 #include "config.h"
 
 /* The event group allows multiple bits for each event,

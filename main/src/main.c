@@ -20,6 +20,7 @@
 #include "esp_log.h"
 
 #include "config.h"
+#include "gpio.h"
 #include "wifi.h"
 #include "nvsStorage.h"
 
@@ -42,7 +43,7 @@ void app_main()
 		);
 	if (xTimerStart(tmr, 0) != pdPASS)
 		ESP_LOGE(TAG, "Timer start error");*/
-
+	gpio_init();
 	wifi_init();
 
 }

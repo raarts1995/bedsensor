@@ -14,14 +14,15 @@ esp_err_t wifi_eventHandler(void* ctx, system_event_t* event) {
 		case SYSTEM_EVENT_STA_START:
 			ESP_LOGI(TAG, "event sta start");
 			/*if (!(wifi_getStatusBit(WIFI_SCANNING_BIT)))
-				wifi_connect();
-			break;*/
+				wifi_connect();*/
+			break;
 		case SYSTEM_EVENT_STA_GOT_IP:
 			ESP_LOGI(TAG, "event got ip: %s",
 					 ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
 			
 			wifi_setStatusBit(WIFI_CONNECTED_BIT);
 			wifi_clearStatusBit(WIFI_CONNECTING_BIT);
+			gpio_setState(GPIO_STA_LED, GPIO_ON);
 			break;
 
 		//triggered when:
@@ -70,22 +71,36 @@ esp_err_t wifi_eventHandler(void* ctx, system_event_t* event) {
 	return ESP_OK;
 }
 
+/*
+	Set a status bit
+*/
 void wifi_setStatusBit(EventBits_t bit) {
 	ESP_LOGI(TAG, "Set bit: %s", wifi_statusBitToString(bit));
 	xEventGroupSetBits(wifiEventGroup, bit);
 }
 
+/*
+	Clear a status bit
+*/
 void wifi_clearStatusBit(EventBits_t bit) {
 	ESP_LOGI(TAG, "Clr bit: %s", wifi_statusBitToString(bit));
 	xEventGroupClearBits(wifiEventGroup, bit);
 }
 
+/*
+	Get a status bit
+*/
 bool wifi_getStatusBit(EventBits_t bit) {
 	if (xEventGroupGetBits(wifiEventGroup) & bit)
 		return true;
 	return false;
 }
 
+/*
+	Wait for a status bit for a maximum time of timeout_ms in milliseconds
+	Returns true if the bit was set before this time
+			false on timeout
+*/
 bool wifi_waitForStatusBit(EventBits_t bit, uint32_t timeout_ms) {
 	if (xEventGroupWaitBits(wifiEventGroup, bit, pdFALSE, pdTRUE, timeout_ms/portTICK_PERIOD_MS) & bit)
 		return true;
@@ -114,7 +129,7 @@ char* wifi_statusBitToString(EventBits_t bit) {
 }
 
 /*
-	Initializes the wifi driver and lastly the nvs storage
+	Initializes the wifi driver reads the nvs storage
 */
 void wifi_init() {
 	wifiEventGroup = xEventGroupCreate();
@@ -126,12 +141,15 @@ void wifi_init() {
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
-
-	if (wifi_getWifiSettings()) {
+	bool btn = gpio_getButtonState();
+	if (wifi_getWifiSettings() && !btn) {
 		wifi_connectSTA();
 	}
 	else {
-		ESP_LOGI(TAG, "No wifi settings known");
+		if (btn)
+			ESP_LOGI(TAG, "Button pressed");
+		else
+			ESP_LOGI(TAG, "No wifi settings known");
 		wifi_startAP();
 	}
 }
@@ -188,6 +206,7 @@ void wifi_connect() {
 		wifi_setStatusBit(WIFI_CONNECTING_BIT);
 		wifi_clearStatusBit(WIFI_CONNECTING_FAILED_BIT);
 		wifi_connectRetries = 0;
+		gpio_setState(GPIO_STA_LED, GPIO_BLINK);
 	}
 	
 	//max retries: clear CONNECTING bit and set CONNECTING_FAILED bit
@@ -198,6 +217,8 @@ void wifi_connect() {
 		wifi_clearStatusBit(WIFI_CONNECTING_BIT);
 		wifi_disconnect();
 		wifi_setStatusBit(WIFI_CONNECTING_FAILED_BIT);
+
+		gpio_setState(GPIO_STA_LED, GPIO_BLINK_SLOW);
 		wifi_startAP();
 	}
 
@@ -222,8 +243,13 @@ void wifi_disconnect() {
 	wifi_clearStatusBit(WIFI_CONNECTING_FAILED_BIT);
 
 	ESP_ERROR_CHECK(esp_wifi_disconnect());
+
+	gpio_setState(GPIO_STA_LED, GPIO_OFF);
 }
 
+/*
+	Returns the wifi connection state
+*/
 wifiState_t wifi_connectState() {
 	if (wifi_getStatusBit(WIFI_CONNECTED_BIT))
 		return WIFI_STATE_CONNECTED;
@@ -234,6 +260,9 @@ wifiState_t wifi_connectState() {
 	return WIFI_STATE_DISCONNECTED;
 }
 
+/*
+	Connect to the wifi network stored in wifi_ssid with password wifi_pass
+*/
 esp_err_t wifi_connectSTA() {
 	ESP_LOGI(TAG, "Starting STA");
 	if (wifi_getStatusBit(WIFI_CONNECTED_BIT))
@@ -255,7 +284,7 @@ esp_err_t wifi_connectSTA() {
 }
 
 /*
-	start the AP and the webserver afterwards
+	start the AP and the webserver
 */
 esp_err_t wifi_startAP() {
 	if (wifi_getStatusBit(WIFI_AP_ACTIVE)) {
@@ -281,24 +310,35 @@ esp_err_t wifi_startAP() {
 		ESP_LOGI(TAG, "WiFi started in AP mode. SSID: '%s', pass: '%s'", BS_WIFI_SSID, BS_WIFI_PASS);
 		server_start(); //start webserver
 		wifi_setStatusBit(WIFI_AP_ACTIVE);
+		gpio_setState(GPIO_AP_LED, GPIO_ON);
 	}
 	else
 		ESP_LOGE(TAG, "WiFi failed to start in AP mode");
 	return err;
 }
 
+/*
+	Stop the AP and webserver
+*/
 void wifi_stopAP() {
 	server_stop();
 	wifi_disableMode(WIFI_MODE_AP);
 	wifi_clearStatusBit(WIFI_AP_ACTIVE);
+	gpio_setState(GPIO_AP_LED, GPIO_OFF);
 }
 
+/*
+	Enable a wifi mode (AP or STA)
+*/
 void wifi_enableMode(wifi_mode_t newMode) {
 	wifi_mode_t mode;
 	ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
 	ESP_ERROR_CHECK(esp_wifi_set_mode(mode | newMode));
 }
 
+/*
+	Disable a wifi mode (AP or STA)
+*/
 void wifi_disableMode(wifi_mode_t newMode) {
 	wifi_mode_t mode;
 	ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
