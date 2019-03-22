@@ -26,14 +26,13 @@ void aws_iot_task(void* param) {
 	connectParams.isCleanSession = true;
 	connectParams.MQTTVersion = MQTT_3_1_1;
 	connectParams.pClientID = /* uniek voor elk apparaat (chipID?) */
-	connectParams.clientIDLen = (uint16_t)strlen(/* lengte van bovenstaand id */);
+	connectParams.clientIDLen = (uint16_t)strlen(connectParams.pClientID);
 	connectParams.isWillMsgPresent = false;
 
-	IoT_Publish_Message_Params awsMsg;
-
-	awsMsg.qos = QOS1; //QOS0: no ack, QOS1: ack
-	awsMsg.payload = (void*)payload;
-	awsMsg.isRetained = 0;
+	iotErr = aws_iot_mqtt_init(&client, &mqttInitParams);
+	if (iotErr != SUCCESS) {
+		ESP_LOGE(TAG, "Failed to initialize AWS");
+	}
 
 	ESP_LOGI(TAG, "AWS IoT SDK Version: %d.%d.%d-%s", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
@@ -47,10 +46,17 @@ void aws_iot_task(void* param) {
 			"\"breathingrate\":\"%d\""
 		"}",
 	"timestamp", "chipID", 65, 20);
+	awsMsg.payloadLen = strlen(payload);
 
-	//...
+	iotErr = aws_iot_mqtt_connect(&client, &connectParams);
+	if (iotErr != SUCCESS) {
+		ESP_LOGE(TAG, "Failed to connect to AWS");
+	}
+
+	iotErr = aws_iot_mqtt_publish(&client, AWS_TOPIC, strlen(AWS_TOPIC), &awsMsg);
 }
 
-void aws_disconnectCallbackHandler() {
+void aws_disconnectCallbackHandler(AWS_IoT_Client* client, void* data) {
+	ESP_LOGI(TAG, "AWS disconnected");
 
 }
