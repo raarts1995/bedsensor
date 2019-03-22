@@ -230,6 +230,7 @@ esp_err_t server_connect(httpd_req_t* req) {
 */
 esp_err_t server_getWifiState(httpd_req_t* req) {
 	server_resetTimer();
+	ESP_LOGI(TAG, "Wifi state requested");
 	switch (wifi_connectState()) {
 		case WIFI_STATE_DISCONNECTED:
 			httpd_resp_sendstr(req, "iDisconnected");
