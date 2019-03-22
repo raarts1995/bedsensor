@@ -103,6 +103,14 @@ esp_err_t server_start() {
 	};
 	httpd_register_uri_handler(server, &getWifiState);
 
+	httpd_uri_t certificateAccess = {
+		.uri = "/aws_*",
+		.method = HTTP_GET,
+		.handler = server_forbidden,
+		.user_ctx = NULL
+	};
+	httpd_register_uri_handler(server, &certificateAccess);
+
 	httpd_uri_t sendFile = {
 		.uri = "/*",
 		.method = HTTP_GET,
@@ -248,6 +256,16 @@ esp_err_t server_getWifiState(httpd_req_t* req) {
 			httpd_resp_sendstr(req, "eUndefined");
 			break;
 	}
+	return ESP_OK;
+}
+ 
+/*
+	Respond with 'Access not allowed' if the user tries to access the AWS certificates
+*/
+esp_err_t server_forbidden(httpd_req_t* req) {
+	ESP_LOGW(TAG, "User tries to access certificates");
+	server_resetTimer();
+	httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Access not allowed");
 	return ESP_OK;
 }
 
