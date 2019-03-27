@@ -30,10 +30,40 @@ bool aws_init() {
 	}
 
 	ESP_LOGI(TAG, "AWS IoT SDK Version: %d.%d.%d-%s", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
+	
+	//start interval timer
+	/*TimerHandle_t tmr = xTimerCreate(
+		"aws timer", //timer name
+		AWS_UPLOAD_INTERVAL/portTICK_PERIOD_MS, //timer period
+		pdTRUE, //autoreload
+		NULL, //timer ID
+		aws_timerTask //callback function
+		);
+	if (xTimerStart(tmr, 0) != pdPASS) {
+		ESP_LOGE(TAG, "Failed to start aws timer");
+		return false;
+	}*/
 	return true;
 }
 
+void aws_timerTask(TimerHandle_t tmr) {
+	if (!rtcTime_timeValid()) {
+		ESP_LOGE(TAG, "Timestamp invalid. Not sending data to AWS");
+		return;
+	}
+
+	if (aws_connect()) {
+		aws_sendData();
+		aws_disconnect();
+	}
+}
+
 bool aws_connect() {
+	if (wifi_connectState() != WIFI_STATE_CONNECTED) {
+		ESP_LOGE(TAG, "Wifi not connected");
+		return false;
+	}
+
 	IoT_Client_Connect_Params connectParams = iotClientConnectParamsDefault;
 
 	connectParams.keepAliveIntervalInSec = AWS_KEEP_ALIVE_INTERVAL;
@@ -76,23 +106,17 @@ void aws_disconnectCallbackHandler(AWS_IoT_Client* client, void* data) {
 }
 
 bool aws_sendData() {
-	char* payload = (char*)malloc(AWS_MAX_PAYLOAD_SIZE*sizeof(char));
+	char* payload = aws_constructPayload();
+	if (payload == NULL)
+		return false;
+
+	ESP_LOGI(TAG, "Payload: %s", payload);
 
 	IoT_Publish_Message_Params awsMsg;
 	awsMsg.qos = QOS1; //QOS0: no ack, QOS1: ack
 	awsMsg.payload = (void*)payload;
-	awsMsg.isRetained = 0;
-
-	//generate payload in json format
-	sprintf(payload, 
-		"{"
-			"\"timestamp\":\"%u\","
-			"\"chipID\":\"%s\","
-			"\"heartrate\":\"%d\","
-			"\"breathingrate\":\"%d\""
-		"}",
-	esp_random(), "chipID", 65, 20);
 	awsMsg.payloadLen = strlen(payload);
+	awsMsg.isRetained = 0;
 
 	IoT_Error_t iotErr = aws_iot_mqtt_publish(&aws_client, AWS_TOPIC, strlen(AWS_TOPIC), &awsMsg);
 	free(payload);
@@ -102,6 +126,27 @@ bool aws_sendData() {
 		return false;
 	}
 	return true;
+}
+
+char* aws_constructPayload() {
+	char* payload = (char*)malloc(AWS_MAX_PAYLOAD_SIZE*sizeof(char));
+
+	//use mac address (unique for every device)
+	uint8_t mac[6] = {0};
+	esp_efuse_mac_get_default(mac);
+	char macStr[32] = {'\0'};
+	sprintf(macStr, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+	//generate payload in json format
+	sprintf(payload, 
+		"{"
+			"\"timestamp\":\"%lu\","
+			"\"chipID\":\"%s\","
+			"\"heartrate\":\"%d\","
+			"\"breathingrate\":\"%d\""
+		"}",
+	rtcTime_getTime(), macStr, 65, 20);
+	return payload;
 }
 
 void aws_testTask(void* param) {
@@ -120,13 +165,19 @@ void aws_testTask(void* param) {
 	while (1) {
 		if (gpio_getButtonState()) {
 			ESP_LOGI(TAG, "Button pressed");
-			aws_connect();
-			if (aws_sendData()) {
-				ESP_LOGI(TAG, "Sending data succeeded");
+
+			if (!rtcTime_timeValid()) {
+				ESP_LOGE(TAG, "Timestamp is invalid. Not sending data to AWS");
 			}
-			else
-				ESP_LOGE(TAG, "Sending data failed");
-			aws_disconnect();
+			else {
+				aws_connect();
+				if (aws_sendData()) {
+					ESP_LOGI(TAG, "Sending data succeeded");
+				}
+				else
+					ESP_LOGE(TAG, "Sending data failed");
+				aws_disconnect();
+			}
 
 			//wait for button release
 			while (gpio_getButtonState())

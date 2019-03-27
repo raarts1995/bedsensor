@@ -1,5 +1,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 
 #include "esp_system.h"
 
@@ -11,16 +12,17 @@
 #include "spiffs.h"
 #include "gpio.h"
 #include "wifi.h"
+#include "rtcTime.h"
 #include "aws.h"
 
 #define TAG "Main"
 
-void app_main()
-{
+void app_main() {
 	nvsStorage_init();
 	spiffs_init();
 	gpio_init();
 	wifi_init();
+	rtcTime_init();
 
 	xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 8192, NULL, 5, NULL, 1);
 }

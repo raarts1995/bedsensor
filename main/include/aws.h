@@ -3,6 +3,8 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
+
 #include "esp_err.h"
 #include "esp_log.h"
 
@@ -14,6 +16,7 @@
 #include "wifi.h"
 #include "gpio.h"
 #include "spiffs.h"
+#include "rtcTime.h"
 #include "config.h"
 
 #define AWS_ROOT_CERT   "/aws_root_cert.pem"
@@ -31,11 +34,15 @@
 #define AWS_MAX_PAYLOAD_SIZE 1024
 #define AWS_TOPIC "bedsensor/measurements"
 
+#define AWS_UPLOAD_INTERVAL 5000 //ms
+
 bool aws_init();
+void aws_timerTask(TimerHandle_t tmr);
 bool aws_connect();
 void aws_disconnect();
 void aws_disconnectCallbackHandler(AWS_IoT_Client* client, void* data);
 bool aws_sendData();
+char* aws_constructPayload();
 void aws_testTask(void* param);
 
 #endif

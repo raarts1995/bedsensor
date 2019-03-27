@@ -1,5 +1,5 @@
 #include "wifi.h"
-#define TAG "Wifi"
+#define TAG "WiFi"
 
 char wifi_ssid[WIFI_MAX_SSID_LEN];
 char wifi_pass[WIFI_MAX_PASS_LEN];
@@ -133,6 +133,7 @@ char* wifi_statusBitToString(EventBits_t bit) {
 	Initializes the wifi driver reads the nvs storage
 */
 void wifi_init() {
+	ESP_LOGI(TAG, "Initializing wifi");
 	wifiEventGroup = xEventGroupCreate();
 
 	tcpip_adapter_init();
@@ -344,4 +345,13 @@ void wifi_disableMode(wifi_mode_t newMode) {
 	wifi_mode_t mode;
 	ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
 	ESP_ERROR_CHECK(esp_wifi_set_mode(mode & ~newMode));
+}
+
+/*
+	Returns the current wifi mode
+*/
+wifi_mode_t wifi_getMode() {
+	wifi_mode_t mode;
+	ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
+	return mode;
 }

@@ -79,4 +79,5 @@ void wifi_stopAP();
 
 void wifi_enableMode(wifi_mode_t newMode);
 void wifi_disableMode(wifi_mode_t newMode);
+wifi_mode_t wifi_getMode();
 #endif
