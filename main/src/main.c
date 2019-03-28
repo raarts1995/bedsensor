@@ -14,6 +14,7 @@
 #include "wifi.h"
 #include "rtcTime.h"
 #include "aws.h"
+#include "sd.h"
 
 #define TAG "Main"
 
@@ -23,6 +24,7 @@ void app_main() {
 	gpio_init();
 	wifi_init();
 	rtcTime_init();
+	sd_init();
 
 	xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 8192, NULL, 5, NULL, 1);
 }

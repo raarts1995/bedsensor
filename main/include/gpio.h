@@ -17,7 +17,13 @@
 typedef enum {
 	GPIO_BUTTON = 4,
 	GPIO_AP_LED = 16,
-	GPIO_STA_LED = 17
+	GPIO_STA_LED = 17,
+
+	GPIO_SD_MISO = 37,
+	GPIO_SD_MOSI = 39,
+	GPIO_SD_SCK = 38,
+	GPIO_SD_CS = 32,
+	GPIO_SD_CD = 37
 } gpioDevice_t;
 
 typedef enum {
@@ -28,6 +34,7 @@ typedef enum {
 } gpioState_t;
 
 void gpio_init();
+bool gpio_getState(gpioDevice_t dev);
 bool gpio_getButtonState();
 void gpio_setState(gpioDevice_t dev, gpioState_t state);
 void gpio_timer_task(TimerHandle_t tmr);

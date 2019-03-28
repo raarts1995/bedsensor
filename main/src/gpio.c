@@ -96,3 +96,20 @@ void gpio_stopTimer() {
 	if (xTimerDelete(gpio_timer, 0) != pdPASS)
 		ESP_LOGE(TAG, "Failed to delete gpio timer");
 }
+
+/*
+	Configure SD Card detect pin
+*/
+void gpio_configureSDCardDetect() {
+	gpio_config_t cd = {0};
+	cd.mode = GPIO_MODE_INPUT;
+	cd.pin_bit_mask = (1ULL<<GPIO_SD_CD);
+	gpio_config(&cd);
+}
+
+/*
+	Detect if an SD card is inserted
+*/
+bool gpio_SDCardDetected() {
+	return !gpio_get_level(GPIO_SD_CD);
+}
