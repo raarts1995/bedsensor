@@ -9,6 +9,11 @@ AWS_IoT_Client aws_client;
 	SPIFFS should be initialized before this function is called
 */
 bool aws_init() {
+	if (!spiffs_fileExists(AWS_ROOT_CERT) || !spiffs_fileExists(AWS_DEVICE_CERT) || !spiffs_fileExists(AWS_PRIVATE_KEY)) {
+		ESP_LOGE(TAG, "AWS certificates unknown");
+		return false;
+	}
+
 	IoT_Client_Init_Params mqttInitParams = iotClientInitParamsDefault;
 
 	mqttInitParams.enableAutoReconnect = false;

@@ -1,3 +1,4 @@
+#!/bin/bash
 TIME=$(date "+%d %b %H:%M")
 MSG="Updated on $TIME"
 if [ "$1" != "" ]; then

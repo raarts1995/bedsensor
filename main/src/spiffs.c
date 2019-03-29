@@ -71,18 +71,7 @@ bool spiffs_fileExists(char* path) {
 	if (!spiffs_mounted())
 		return false;
 
-	struct stat file_stat;
-	char filepath[SPIFFS_MAX_FILENAME];
-
-	/* Retrieve the base path of file storage to construct the full path*/
-	strcpy(filepath, SPIFFS_BASEPATH);
-
-	strcat(filepath, path);
-	if (stat(filepath, &file_stat) == -1) {
-		ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
-		return false;
-	}
-	return true;
+	return fileIO_fileExists(SPIFFS_BASEPATH, path);
 }
 
 /*
@@ -92,18 +81,7 @@ size_t spiffs_getFileSize(char* path) {
 	if (!spiffs_mounted())
 		return 0;
 
-	struct stat file_stat;
-	char filepath[SPIFFS_MAX_FILENAME];
-
-	/* Retrieve the base path of file storage to construct the full path*/
-	strcpy(filepath, SPIFFS_BASEPATH);
-
-	strcat(filepath, path);
-	if (stat(filepath, &file_stat) == -1) {
-		ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
-		return 0;
-	}
-	return file_stat.st_size;
+	return fileIO_getFileSize(SPIFFS_BASEPATH, path);
 }
 
 /*
@@ -117,20 +95,13 @@ bool spiffs_openFile(char* path) {
 
 	spiffs_closeFile();
 
-	if (!spiffs_fileExists(path))
+	if (!fileIO_fileExists(SPIFFS_BASEPATH, path))
 		return false;
 
-	char filepath[SPIFFS_MAX_FILENAME];
+	spiffs_filePtr = fileIO_openFile(SPIFFS_BASEPATH, path, "r");
 
-	/* Retrieve the base path of file storage to construct the full path*/
-	strcpy(filepath, SPIFFS_BASEPATH);
-	if (path[0] != '/')
-		strcat(filepath, "/");
-	strcat(filepath, path);
-
-	spiffs_filePtr = fopen(filepath, "r");
 	if (!spiffs_filePtr) {
-		ESP_LOGE(TAG, "SPIFFS: Failed to open file: %s", filepath);
+		ESP_LOGE(TAG, "Failed to open file: %s", path);
 		return false;
 	}
 	return true;
@@ -145,7 +116,7 @@ size_t spiffs_readFile(char* chunk, size_t chunkSize) {
 		return 0;
 
 	if (spiffs_filePtr)
-		return fread(chunk, 1, chunkSize, spiffs_filePtr);
+		return fileIO_readFile(spiffs_filePtr, chunk, chunkSize);
 	return 0;
 }
 

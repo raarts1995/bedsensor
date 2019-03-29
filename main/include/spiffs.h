@@ -13,6 +13,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
+#include "fileIO.h"
 #include "config.h"
 
 #define SPIFFS_BASEPATH "/spiffs"
