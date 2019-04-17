@@ -12,7 +12,7 @@
 
 #include "driver/gpio.h"
 
-#include "config.h"
+#include "espSystem.h"
 
 typedef enum {
 	GPIO_BUTTON = 4,

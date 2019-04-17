@@ -19,7 +19,7 @@
 #include "server.h"
 #include "nvsStorage.h"
 #include "gpio.h"
-#include "config.h"
+#include "espSystem.h"
 
 /* The event group allows multiple bits for each event,
    but we only care about one event - are we connected

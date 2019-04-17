@@ -17,7 +17,7 @@
 #include "gpio.h"
 #include "spiffs.h"
 #include "rtcTime.h"
-#include "config.h"
+#include "espSystem.h"
 
 #define AWS_ROOT_CERT   "/aws_root_cert.pem"
 #define AWS_DEVICE_CERT "/aws_device_cert.pem.crt"

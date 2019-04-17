@@ -10,6 +10,7 @@
 #include "esp_log.h"
 
 #include "wifi.h"
+#include "espSystem.h"
 
 void rtcTime_init();
 time_t rtcTime_getTime();

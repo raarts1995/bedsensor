@@ -74,7 +74,7 @@ bool aws_connect() {
 	connectParams.keepAliveIntervalInSec = AWS_KEEP_ALIVE_INTERVAL;
 	connectParams.isCleanSession = true;
 	connectParams.MQTTVersion = MQTT_3_1_1;
-	connectParams.pClientID = "ESPbedsensor"; //moet uniek zijn voor ieder apparaat
+	connectParams.pClientID = espSystem_getMacAddr(); //moet uniek zijn voor ieder apparaat (MAC address)
 	connectParams.clientIDLen = (uint16_t)strlen(connectParams.pClientID);
 	connectParams.isWillMsgPresent = false;
 
@@ -136,12 +136,6 @@ bool aws_sendData() {
 char* aws_constructPayload() {
 	char* payload = (char*)malloc(AWS_MAX_PAYLOAD_SIZE*sizeof(char));
 
-	//use mac address (unique for every device)
-	uint8_t mac[6] = {0};
-	esp_efuse_mac_get_default(mac);
-	char macStr[32] = {'\0'};
-	sprintf(macStr, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-
 	//generate payload in json format
 	sprintf(payload, 
 		"{"
@@ -150,7 +144,7 @@ char* aws_constructPayload() {
 			"\"heartrate\":\"%d\","
 			"\"breathingrate\":\"%d\""
 		"}",
-	rtcTime_getTime(), macStr, 65, 20);
+	rtcTime_getTime(), espSystem_getMacAddr(), 65, 20);
 	return payload;
 }
 

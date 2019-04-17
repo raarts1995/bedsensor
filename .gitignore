@@ -1,6 +1,5 @@
 #ignore folders
 build/
-aws_certificaten/
 
 #ignore certificates
 main/www/aws_*

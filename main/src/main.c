@@ -7,7 +7,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
-#include "config.h"
+#include "espSystem.h"
 #include "nvsStorage.h"
 #include "spiffs.h"
 #include "gpio.h"
@@ -18,7 +18,9 @@
 
 #define TAG "Main"
 
+//init application
 void app_main() {
+	espSystem_init();
 	nvsStorage_init();
 	spiffs_init();
 	gpio_init();

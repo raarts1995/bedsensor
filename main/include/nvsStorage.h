@@ -7,7 +7,7 @@
 
 #include "nvs_flash.h"
 #include "nvs.h"
-#include "config.h"
+#include "espSystem.h"
 
 esp_err_t nvsStorage_init();
 esp_err_t nvsStorage_open();
