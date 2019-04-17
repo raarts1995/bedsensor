@@ -139,12 +139,12 @@ char* aws_constructPayload() {
 	//generate payload in json format
 	sprintf(payload, 
 		"{"
-			"\"timestamp\":\"%lu\","
 			"\"chipID\":\"%s\","
+			"\"time\":\"%lu\","
 			"\"heartrate\":\"%d\","
 			"\"breathingrate\":\"%d\""
 		"}",
-	rtcTime_getTime(), espSystem_getMacAddr(), 65, 20);
+	espSystem_getMacAddr(), rtcTime_getTime(), 65, 20);
 	return payload;
 }
 

@@ -4,3 +4,6 @@ build/
 #ignore certificates
 main/www/aws_*
 
+#ignore aws access keys
+scripts/awsConfig/awsCredentials.txt
+
