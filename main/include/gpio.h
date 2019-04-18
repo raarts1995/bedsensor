@@ -19,11 +19,21 @@ typedef enum {
 	GPIO_AP_LED = 16,
 	GPIO_STA_LED = 17,
 
+
+	//SD card pins (SD card driver does not support bus sharing (yet?))
 	GPIO_SD_MISO = 19,
 	GPIO_SD_MOSI = 23,
 	GPIO_SD_SCK = 18,
 	GPIO_SD_CS = 5,
-	GPIO_SD_CD = 36
+	GPIO_SD_CD = 36,
+
+	//common SPI bus pins
+	GPIO_MISO = 12,
+	GPIO_MOSI = 13,
+	GPIO_SCK = 14,
+	
+	//ADC pins
+	GPIO_ADC_CS = 27
 } gpioDevice_t;
 
 typedef enum {

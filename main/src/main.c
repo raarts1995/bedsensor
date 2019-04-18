@@ -15,8 +15,19 @@
 #include "rtcTime.h"
 #include "aws.h"
 #include "sd.h"
+#include "spi.h"
+#include "max11206.h"
 
 #define TAG "Main"
+
+void timerTick(TimerHandle_t tmr) {
+	if (!adc_running()) {
+		//printf("%u\n", adc_measure(7)); //50sps
+		ESP_LOGI(TAG, "%u", adc_measure(6));
+	}
+	else
+		ESP_LOGI(TAG, "adc still running");
+}
 
 //init application
 void app_main() {
@@ -26,7 +37,19 @@ void app_main() {
 	gpio_init();
 	wifi_init();
 	rtcTime_init();
-	sd_init();
+	//sd_init();
+	spi_init();
+	adc_init();
+
+	TimerHandle_t tmr = xTimerCreate(
+		"main tmr", //timer name
+		50/portTICK_PERIOD_MS, //timer period
+		pdTRUE, //autoreload
+		NULL, //timer ID
+		timerTick //callback function
+		);
+	if (xTimerStart(tmr, 0) != pdPASS)
+		ESP_LOGE(TAG, "Failed to start timer");
 
 	xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 8192, NULL, 5, NULL, 1);
 }

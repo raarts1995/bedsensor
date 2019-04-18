@@ -95,9 +95,6 @@ def getAWSCredentials():
 print("Opening credentials file")
 if (not getAWSCredentials()):
 	exit()
-print(awsAccessKey)
-print(awsSecretKey)
-print(awsRegion)
 
 print("Retrieving MAC address")
 thingName = getMACStr()
@@ -114,19 +111,18 @@ session = boto3.Session(
 )
 
 iot = session.client('iot')
-dynamodb = session.client('dynamodb')
 
 print("Check if " + thingName + " already exists")
 try:
 	response = iot.describe_thing(
 		thingName = thingName
 	)
-	print("    Thing " + thingName + " already exists")
+	print("    Device " + thingName + " already exists")
 	exit()
 except iot.exceptions.ResourceNotFoundException:
-	print("    Thing " + thingName + " does not exist")
+	print("    Device " + thingName + " does not exist")
 
-print("Creating thing "+ thingName)
+print("Creating device "+ thingName)
 response = iot.create_thing(
 	thingName = thingName,
 	thingTypeName = bedsensorThingType
@@ -157,7 +153,7 @@ if printResponses:
 	print("    public key:     " + publicKey)
 	print("    private key:    " + privateKey)
 
-print("Attaching certificate to thing")
+print("Attaching certificate to device")
 response = iot.attach_thing_principal(
 	thingName = thingName,
 	principal = certificateArn
