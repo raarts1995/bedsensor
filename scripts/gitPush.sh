@@ -1,5 +1,8 @@
 #!/bin/bash
-cd ../
+if [[ "$PWD" =~ scripts ]]; then
+	cd ../
+fi
+
 TIME=$(date "+%d %b %H:%M")
 MSG="Updated on $TIME"
 if [ "$1" != "" ]; then

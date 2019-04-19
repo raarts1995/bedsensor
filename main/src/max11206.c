@@ -5,43 +5,55 @@
 #define ADC_READ_CMD(reg) (0xc0 | (reg << 1) | 0x01) //set bit 7, 8 and 1: b110rrrr1
 
 spiDevice adc;
-bool adcRunning;
+bool adcBusy;
 
 void adc_init() {
 	//set adcRunning true while initializing adc
-	adcRunning = true;
-	adc = spi_addDevice(GPIO_ADC_CS, ADC_MAX_CLOCK_FREQ, 0);
+	adcBusy = true;
+	adc = spi_addDevice(GPIO_ADC_CS, 400000, 0);
 	adc_write8(ADC_REG_CTRL1, ADC_REG_CTRL1_LINEF | ADC_REG_CTRL1_U_BN | ADC_REG_CTRL1_SCYCLE); //set 50 Hz filtering, unipolar, single conversion
 	adc_selfCalibrate();
-	adcRunning = false;
-}
-
-bool adc_running() {
-	return adcRunning;
+	adcBusy = false;
 }
 
 uint32_t adc_measure(uint8_t rate) {
-	adcRunning = true;
-	adc_sendCommand(rate & 0x07);
-	while ((adc_read8(ADC_REG_STAT1) & ADC_REG_STAT1_RDY) == 0) {
+	adcBusy = true;
+	adc_startConversion(rate);
+	while (!adc_ready()) {
 		vTaskDelay(10/portTICK_PERIOD_MS);
 	}
-	uint32_t val = adc_read24(ADC_REG_DATA);
-	val = (val >> 4) & 0xFFFFF;
-	adcRunning = false;
+	uint32_t val = adc_readData();
+	adcBusy = false;
 	return val;
+}
+
+void adc_startConversion(uint8_t rate) {
+	adc_sendCommand(rate & 0x07);
+}
+
+bool adc_running() {
+	return ((adc_read8(ADC_REG_STAT1) & ADC_REG_STAT1_MSTAT) != 0);
+}
+
+bool adc_ready() {
+	return ((adc_read8(ADC_REG_STAT1) & ADC_REG_STAT1_RDY) != 0);
+}
+
+uint32_t adc_readData() {
+	uint32_t val = adc_read24(ADC_REG_DATA);
+	return (val >> 4) & 0xFFFFF;
 }
 
 void adc_selfCalibrate() {
 
 	//enable self calibration (set NOSCG and NOSCO to 0)
 	adc_write8(ADC_REG_CTRL3, adc_read8(ADC_REG_CTRL3) & ~(ADC_REG_CTRL3_NOSCG | ADC_REG_CTRL3_NOSCO));
-	adc_sendCommand(0x10); //start self calibration
+	adc_sendCommand(ADC_CMD_SCC); //start self calibration
 
-	while (adc_read8(ADC_REG_STAT1) & ADC_REG_STAT1_MSTAT)
+	while (adc_running())
 		vTaskDelay(100/portTICK_PERIOD_MS);
 
-	if (adc_read8(ADC_REG_STAT1) & ADC_REG_STAT1_RDY)
+	if (adc_ready())
 		adc_read24(ADC_REG_DATA);
 }
 

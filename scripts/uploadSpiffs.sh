@@ -1,5 +1,8 @@
 #!/bin/bash
-cd ../
+if [[ "$PWD" =~ scripts ]]; then
+	cd ../
+fi
+
 PORT="/dev/ttyUSB0"
 BAUD=921600
 

@@ -28,12 +28,12 @@ typedef enum {
 	GPIO_SD_CD = 36,
 
 	//common SPI bus pins
-	GPIO_MISO = 12,
+	GPIO_MISO = 27,
 	GPIO_MOSI = 13,
 	GPIO_SCK = 14,
 	
 	//ADC pins
-	GPIO_ADC_CS = 27
+	GPIO_ADC_CS = 26
 } gpioDevice_t;
 
 typedef enum {

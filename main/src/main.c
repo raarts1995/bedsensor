@@ -21,9 +21,10 @@
 #define TAG "Main"
 
 void timerTick(TimerHandle_t tmr) {
-	if (!adc_running()) {
-		//printf("%u\n", adc_measure(7)); //50sps
-		ESP_LOGI(TAG, "%u", adc_measure(6));
+	if (!adc_running() || adc_ready()) {
+		printf("%u\n", adc_readData()); //50sps
+		//ESP_LOGI(TAG, "%u", adc_readData());
+		adc_startConversion(7);
 	}
 	else
 		ESP_LOGI(TAG, "adc still running");
@@ -40,10 +41,11 @@ void app_main() {
 	//sd_init();
 	spi_init();
 	adc_init();
+	adc_startConversion(6);
 
 	TimerHandle_t tmr = xTimerCreate(
 		"main tmr", //timer name
-		50/portTICK_PERIOD_MS, //timer period
+		20/portTICK_PERIOD_MS, //timer period
 		pdTRUE, //autoreload
 		NULL, //timer ID
 		timerTick //callback function
