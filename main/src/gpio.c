@@ -12,6 +12,8 @@ uint8_t gpio_slowCnt;
 	Initialize the required GPIO pins and start the timer for blinking
 */
 void gpio_init() {
+	gpio_install_isr_service(0);
+
 	gpio_config_t btn = {0};
 	btn.mode = GPIO_MODE_INPUT;
 	btn.pin_bit_mask = (1ULL<<GPIO_BUTTON);
@@ -101,15 +103,51 @@ void gpio_stopTimer() {
 	Configure SD Card detect pin
 */
 void gpio_configureSDCardDetect() {
-	gpio_config_t cd = {0};
-	cd.mode = GPIO_MODE_INPUT;
-	cd.pin_bit_mask = (1ULL<<GPIO_SD_CD);
-	gpio_config(&cd);
+	gpio_configurePin(GPIO_SD_CD, GPIO_MODE_INPUT);
 }
 
 /*
 	Detect if an SD card is inserted
 */
 bool gpio_SDCardDetected() {
-	return gpio_get_level(GPIO_SD_CD);
+	return gpio_getPin(GPIO_SD_CD);
+}
+
+/*
+	Configure a GPIO pin
+*/
+void gpio_configurePin(gpioDevice_t dev, gpio_mode_t mode) {
+	gpio_config_t cd = {0};
+	cd.mode = mode;
+	cd.pin_bit_mask = (1ULL<<dev);
+	gpio_config(&cd);
+}
+
+/*
+	Set the state of a GPIO pin
+*/
+void gpio_setPin(gpioDevice_t dev, bool state) {
+	gpio_set_level(dev, state);
+}
+
+/*
+	Get the state of a GPIO pin
+*/
+bool gpio_getPin(gpioDevice_t dev) {
+	return gpio_get_level(dev);
+}
+
+/*
+	Attach an interrupt to a GPIO pin
+*/
+void gpio_attachInterrupt(gpioDevice_t dev, gpio_int_type_t intType, void (*fn) (void*)) {
+	gpio_set_intr_type(dev, intType);
+	gpio_isr_handler_add(dev, fn, (void*)dev);
+}
+
+/*
+	Detach a previously attached interrupt from a GPIO pin
+*/
+void gpio_detachInterrupt(gpioDevice_t dev) {
+	gpio_isr_handler_remove(dev);
 }

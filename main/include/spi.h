@@ -13,6 +13,8 @@
 
 #define SPI_MAX_TRANSFER_SIZE 32 //max size without using DMA transfer
 
+#define SPI_PIN_NC -1 //not connected
+
 typedef spi_device_handle_t spiDevice;
 
 void spi_init();

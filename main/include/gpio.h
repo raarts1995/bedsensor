@@ -54,4 +54,10 @@ void gpio_stopTimer();
 void gpio_configureSDCardDetect();
 bool gpio_SDCardDetected();
 
+void gpio_configurePin(gpioDevice_t dev, gpio_mode_t mode);
+void gpio_setPin(gpioDevice_t dev, bool state);
+bool gpio_getPin(gpioDevice_t dev);
+void gpio_attachInterrupt(gpioDevice_t dev, gpio_int_type_t intType, void (*fn) (void*));
+void gpio_detachInterrupt(gpioDevice_t dev);
+
 #endif

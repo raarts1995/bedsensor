@@ -1,6 +1,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/timers.h"
+#include "freertos/queue.h"
 
 #include "esp_system.h"
 
@@ -24,26 +25,30 @@
 
 /*
 	Samples per Second
-	|----|---------------|---------------|
-	|rate|LINEF=0 (60 Hz)|LINEF=1 (50 Hz)|
-	|----|---------------|---------------|
-	| 0  | 1             | 0,833         |
-	| 1  | 2,5           | 2,08          |
-	| 2  | 5             | 4,17          |
-	| 3  | 10            | 8,33          |
-	| 4  | 15            | 12,5          |
-	| 5  | 30            | 25            |
-	| 6  | 60            | 50            |
-	| 7  | 120           | 100           |
-	|----|---------------|---------------|
+	     |-------------------------------|-------------------------------|
+	     | Single cycle                  | Continuous cycle              |
+	|----|---------------|---------------|---------------|---------------|
+	|rate|LINEF=0 (60 Hz)|LINEF=1 (50 Hz)|LINEF=0 (60 Hz)|LINEF=1 (50 Hz)|
+	|----|---------------|---------------|---------------|---------------|
+	| 0  | 1             | 0,833         | -             | -             |
+	| 1  | 2,5           | 2,08          | -             | -             |
+	| 2  | 5             | 4,17          | -             | -             |
+	| 3  | 10            | 8,33          | -             | -             |
+	| 4  | 15            | 12,5          | 60            | 50            |
+	| 5  | 30            | 25            | 120           | 100           |
+	| 6  | 60            | 50            | 240           | 200           |
+	| 7  | 120           | 100           | 480           | 400           |
+	|----|---------------|---------------|---------------|---------------|
 */
-#define ADC_RATE 7 
+#define ADC_RATE 6
 
 #define avgMax 5
 int32_t avgList[avgMax] = {0};
 int avgCnt = 0;
 
-void timerTick(TimerHandle_t tmr) {
+xQueueHandle gpio_evt_queue = NULL;
+
+/*void timerTick(TimerHandle_t tmr) {
 	if (!adc_running() || adc_ready()) {
 		avgList[avgCnt] = adc_readData();
 		int32_t avg = 0;
@@ -58,7 +63,20 @@ void timerTick(TimerHandle_t tmr) {
 	}
 	else
 		ESP_LOGI(TAG, "adc still running");
+}*/
+
+/*static void IRAM_ATTR gpio_isr(void *args) {
 }
+
+static void gpioPrint(void* arg)
+{
+    uint32_t io_num;
+    for(;;) {
+        if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
+            ESP_LOGI(TAG, "GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
+        }
+    }
+}*/
 
 //init application
 void app_main() {
@@ -70,10 +88,19 @@ void app_main() {
 	rtcTime_init();
 	//sd_init();
 	spi_init();
+	
 	adc_init();
 	adc_startConversion(ADC_RATE);
+	adc_setInterrupt();
+	
+	/*gpio_attachInterrupt(GPIO_BUTTON, GPIO_PIN_INTR_POSEDGE, gpio_isr);
+	
+    //create a queue to handle gpio event from isr
+    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+    //start gpio task
+    xTaskCreate(gpioPrint, "gpioPrint", 2048, NULL, 10, NULL);*/
 
-	TimerHandle_t tmr = xTimerCreate(
+	/*TimerHandle_t tmr = xTimerCreate(
 		"main tmr", //timer name
 		(1000/SAMPLE_RATE)/portTICK_PERIOD_MS, //timer period
 		pdTRUE, //autoreload
@@ -81,7 +108,7 @@ void app_main() {
 		timerTick //callback function
 		);
 	if (xTimerStart(tmr, 0) != pdPASS)
-		ESP_LOGE(TAG, "Failed to start timer");
+		ESP_LOGE(TAG, "Failed to start timer");*/
 
-	xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 8192, NULL, 5, NULL, 1);
+	//xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 8192, NULL, 5, NULL, 1);
 }

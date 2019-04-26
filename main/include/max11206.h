@@ -47,15 +47,22 @@
 void adc_init();
 int32_t adc_measure(uint8_t rate);
 void adc_startConversion(uint8_t rate);
+void adc_continuousMode(bool continuous);
 bool adc_running();
 bool adc_ready();
 int32_t adc_readData();
 void adc_selfCalibrate();
+
+void adc_setInterrupt();
+void adc_clearInterrupt();
+void IRAM_ATTR adc_dataReadyIntr(void *params);
+void adc_interruptHandlerTask(void* arg);
 
 void adc_sendCommand(uint8_t command);
 void adc_write8(uint8_t reg, uint8_t data);
 uint8_t adc_read8(uint8_t reg);
 void adc_write24(uint8_t reg, uint32_t data);
 uint32_t adc_read24(uint8_t reg);
+void adc_transfer(spiDevice spi, uint8_t *buffer, uint8_t len);
 
 #endif
