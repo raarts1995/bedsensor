@@ -20,11 +20,41 @@
 
 #define TAG "Main"
 
+#define SAMPLE_RATE 50 //hz
+
+/*
+	Samples per Second
+	|----|---------------|---------------|
+	|rate|LINEF=0 (60 Hz)|LINEF=1 (50 Hz)|
+	|----|---------------|---------------|
+	| 0  | 1             | 0,833         |
+	| 1  | 2,5           | 2,08          |
+	| 2  | 5             | 4,17          |
+	| 3  | 10            | 8,33          |
+	| 4  | 15            | 12,5          |
+	| 5  | 30            | 25            |
+	| 6  | 60            | 50            |
+	| 7  | 120           | 100           |
+	|----|---------------|---------------|
+*/
+#define ADC_RATE 7 
+
+#define avgMax 5
+int32_t avgList[avgMax] = {0};
+int avgCnt = 0;
+
 void timerTick(TimerHandle_t tmr) {
 	if (!adc_running() || adc_ready()) {
-		printf("%u\n", adc_readData()); //50sps
-		//ESP_LOGI(TAG, "%u", adc_readData());
-		adc_startConversion(7);
+		avgList[avgCnt] = adc_readData();
+		int32_t avg = 0;
+		for (int i = 0; i < avgMax; i++)
+			avg += avgList[i];
+		avg /= avgMax;
+		
+		printf("%d %d\n", avgList[avgCnt], avg);
+		
+		avgCnt = (avgCnt + 1) % avgMax;
+		adc_startConversion(ADC_RATE);
 	}
 	else
 		ESP_LOGI(TAG, "adc still running");
@@ -41,11 +71,11 @@ void app_main() {
 	//sd_init();
 	spi_init();
 	adc_init();
-	adc_startConversion(6);
+	adc_startConversion(ADC_RATE);
 
 	TimerHandle_t tmr = xTimerCreate(
 		"main tmr", //timer name
-		20/portTICK_PERIOD_MS, //timer period
+		(1000/SAMPLE_RATE)/portTICK_PERIOD_MS, //timer period
 		pdTRUE, //autoreload
 		NULL, //timer ID
 		timerTick //callback function

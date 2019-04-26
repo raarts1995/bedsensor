@@ -11,18 +11,18 @@ void adc_init() {
 	//set adcRunning true while initializing adc
 	adcBusy = true;
 	adc = spi_addDevice(GPIO_ADC_CS, 400000, 0);
-	adc_write8(ADC_REG_CTRL1, ADC_REG_CTRL1_LINEF | ADC_REG_CTRL1_U_BN | ADC_REG_CTRL1_SCYCLE); //set 50 Hz filtering, unipolar, single conversion
+	adc_write8(ADC_REG_CTRL1, ADC_REG_CTRL1_LINEF | ADC_REG_CTRL1_SCYCLE); //set 50 Hz filtering, unipolar, single conversion
 	adc_selfCalibrate();
 	adcBusy = false;
 }
 
-uint32_t adc_measure(uint8_t rate) {
+int32_t adc_measure(uint8_t rate) {
 	adcBusy = true;
 	adc_startConversion(rate);
 	while (!adc_ready()) {
 		vTaskDelay(10/portTICK_PERIOD_MS);
 	}
-	uint32_t val = adc_readData();
+	int32_t val = adc_readData();
 	adcBusy = false;
 	return val;
 }
@@ -39,9 +39,12 @@ bool adc_ready() {
 	return ((adc_read8(ADC_REG_STAT1) & ADC_REG_STAT1_RDY) != 0);
 }
 
-uint32_t adc_readData() {
-	uint32_t val = adc_read24(ADC_REG_DATA);
-	return (val >> 4) & 0xFFFFF;
+int32_t adc_readData() {
+	int32_t val = (int32_t)adc_read24(ADC_REG_DATA);
+	val = (val >> 4) & 0xFFFFF;
+	if (val & (1 << 19))
+		val |= 0xFFF00000; //convert 20 bit 2's complement to 32 bit
+	return val;
 }
 
 void adc_selfCalibrate() {
@@ -59,7 +62,7 @@ void adc_selfCalibrate() {
 
 void adc_sendCommand(uint8_t command) {
 	//set bit 8, clear bit 7: b10cccccc
-	command = 0x80 | (command & ~(0xc0));
+	command = 0x80 | (command & ~(0xC0));
 	spi_transfer(adc, &command, 1);
 }
 

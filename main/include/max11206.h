@@ -45,11 +45,11 @@
 #define ADC_REG_CTRL3_DGAIN_OFFSET 5
 
 void adc_init();
-uint32_t adc_measure(uint8_t rate);
+int32_t adc_measure(uint8_t rate);
 void adc_startConversion(uint8_t rate);
 bool adc_running();
 bool adc_ready();
-uint32_t adc_readData();
+int32_t adc_readData();
 void adc_selfCalibrate();
 
 void adc_sendCommand(uint8_t command);
