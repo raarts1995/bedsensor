@@ -9,7 +9,6 @@ if [ "$1" != "" ]; then
 	MSG=$1
 fi
 echo "Commit message: $MSG"
-git add *
-git commit -m "$MSG"
+git commit -am "$MSG"
 git push -u origin master
 echo "Done"

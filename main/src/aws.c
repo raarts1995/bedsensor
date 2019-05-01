@@ -4,11 +4,15 @@
 
 AWS_IoT_Client aws_client;
 
+bool aws_timerBusy;
+
 /*
 	Initialize the AWS IoT client
 	SPIFFS should be initialized before this function is called
 */
 bool aws_init() {
+	aws_timerBusy = false;
+
 	if (!spiffs_fileExists(AWS_ROOT_CERT) || !spiffs_fileExists(AWS_DEVICE_CERT) || !spiffs_fileExists(AWS_PRIVATE_KEY)) {
 		ESP_LOGE(TAG, "AWS certificates unknown");
 		return false;
@@ -16,7 +20,7 @@ bool aws_init() {
 
 	IoT_Client_Init_Params mqttInitParams = iotClientInitParamsDefault;
 
-	mqttInitParams.enableAutoReconnect = false;
+	mqttInitParams.enableAutoReconnect = true;
 	mqttInitParams.pHostURL = AWS_IOT_MQTT_HOST;
 	mqttInitParams.port = AWS_IOT_MQTT_PORT;
 	mqttInitParams.pRootCALocation = AWS_ROOT_CERT_PATH;
@@ -35,32 +39,28 @@ bool aws_init() {
 	}
 
 	ESP_LOGI(TAG, "AWS IoT SDK Version: %d.%d.%d-%s", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
-	
-	//start interval timer
-	/*TimerHandle_t tmr = xTimerCreate(
-		"aws timer", //timer name
-		AWS_UPLOAD_INTERVAL/portTICK_PERIOD_MS, //timer period
-		pdTRUE, //autoreload
-		NULL, //timer ID
-		aws_timerTask //callback function
-		);
-	if (xTimerStart(tmr, 0) != pdPASS) {
-		ESP_LOGE(TAG, "Failed to start aws timer");
-		return false;
-	}*/
+
 	return true;
 }
 
 void aws_timerTask(TimerHandle_t tmr) {
-	if (!rtcTime_timeValid()) {
-		ESP_LOGE(TAG, "Timestamp invalid. Not sending data to AWS");
+	if (aws_timerBusy) {
+		ESP_LOGE(TAG, "Timer busy...");
 		return;
 	}
-
-	if (aws_connect()) {
-		aws_sendData();
-		aws_disconnect();
+	aws_timerBusy = true;
+	if (rtcTime_timeValid()) {
+		if (!aws_sendData()) {
+			ESP_LOGI(TAG, "Attempt reconnect and retry");
+			aws_disconnect();
+			if (aws_connect())
+				if (aws_sendData())
+					ESP_LOGI(TAG, "Data sent");
+		}
+		else
+			ESP_LOGI(TAG, "Data sent");
 	}
+	aws_timerBusy = false;
 }
 
 bool aws_connect() {
@@ -140,9 +140,9 @@ char* aws_constructPayload() {
 	sprintf(payload, 
 		"{"
 			"\"chipID\":\"%s\","
-			"\"time\":\"%lu\","
-			"\"heartrate\":\"%d\","
-			"\"breathingrate\":\"%d\""
+			"\"time\":%lu,"
+			"\"heartrate\":%d,"
+			"\"breathingrate\":%d"
 		"}",
 	espSystem_getMacAddr(), rtcTime_getTime(), 65, 20);
 	return payload;
@@ -161,22 +161,31 @@ void aws_testTask(void* param) {
 	ESP_LOGI(TAG, "Wifi connected");
 
 	aws_init();
+
+	aws_connect();
+
+	TimerHandle_t tmr = xTimerCreate(
+		"aws timer", //timer name
+		AWS_UPLOAD_INTERVAL/portTICK_PERIOD_MS, //timer period
+		pdTRUE, //autoreload
+		NULL, //timer ID
+		aws_timerTask //callback function
+		);
+
 	while (1) {
 		if (gpio_getButtonState()) {
 			ESP_LOGI(TAG, "Button pressed");
-
-			if (!rtcTime_timeValid()) {
-				ESP_LOGE(TAG, "Timestamp is invalid. Not sending data to AWS");
+			if (!xTimerIsTimerActive(tmr)) {
+				ESP_LOGI(TAG, "Starting timer");
+				if (xTimerStart(tmr, 0) != pdPASS) {
+					ESP_LOGE(TAG, "Failed to start aws timer");
+					return false;
+				}
 			}
 			else {
-				aws_connect();
-				if (aws_sendData()) {
-					ESP_LOGI(TAG, "Sending data succeeded");
-				}
-				else
-					ESP_LOGE(TAG, "Sending data failed");
-				aws_disconnect();
+				ESP_LOGI(TAG, "Timer already started");
 			}
+			//aws_timerTask(NULL);
 
 			//wait for button release
 			while (gpio_getButtonState())

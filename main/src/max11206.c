@@ -50,9 +50,9 @@ void adc_startConversion(uint8_t rate) {
 */
 void adc_continuousMode(bool continuous) {
 	if (continuous)
-		adc_write8(ADC_REG_CTRL1, adcRead(ADC_REG_CTRL1) & ~(ADC_REG_CTRL1_SCYCLE)); //clear single cycle bit
+		adc_write8(ADC_REG_CTRL1, adc_read8(ADC_REG_CTRL1) & ~(ADC_REG_CTRL1_SCYCLE)); //clear single cycle bit
 	else
-		adc_write8(ADC_REG_CTRL1, adcRead(ADC_REG_CTRL1) | ADC_REG_CTRL1_SCYCLE); //set single cycle bit
+		adc_write8(ADC_REG_CTRL1, adc_read8(ADC_REG_CTRL1) | ADC_REG_CTRL1_SCYCLE); //set single cycle bit
 }
 
 /*
@@ -130,7 +130,7 @@ void adc_interruptHandlerTask(void* arg) {
     int32_t val;
     for(;;) {
         if(xQueueReceive(adcQueue, &val, portMAX_DELAY)) {
-            printf("%d\n", val);
+            //printf("%d\n", val);
         }
     }
 }

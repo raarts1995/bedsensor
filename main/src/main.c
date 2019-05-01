@@ -46,38 +46,6 @@
 int32_t avgList[avgMax] = {0};
 int avgCnt = 0;
 
-xQueueHandle gpio_evt_queue = NULL;
-
-/*void timerTick(TimerHandle_t tmr) {
-	if (!adc_running() || adc_ready()) {
-		avgList[avgCnt] = adc_readData();
-		int32_t avg = 0;
-		for (int i = 0; i < avgMax; i++)
-			avg += avgList[i];
-		avg /= avgMax;
-		
-		printf("%d %d\n", avgList[avgCnt], avg);
-		
-		avgCnt = (avgCnt + 1) % avgMax;
-		adc_startConversion(ADC_RATE);
-	}
-	else
-		ESP_LOGI(TAG, "adc still running");
-}*/
-
-/*static void IRAM_ATTR gpio_isr(void *args) {
-}
-
-static void gpioPrint(void* arg)
-{
-    uint32_t io_num;
-    for(;;) {
-        if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-            ESP_LOGI(TAG, "GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
-        }
-    }
-}*/
-
 //init application
 void app_main() {
 	espSystem_init();
@@ -86,10 +54,10 @@ void app_main() {
 	gpio_init();
 	wifi_init();
 	rtcTime_init();
-	//sd_init();
 	spi_init();
-	
+	//sd_init();
 	adc_init();
+	
 	adc_startConversion(ADC_RATE);
 	adc_setInterrupt();
 	
@@ -110,5 +78,5 @@ void app_main() {
 	if (xTimerStart(tmr, 0) != pdPASS)
 		ESP_LOGE(TAG, "Failed to start timer");*/
 
-	//xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 8192, NULL, 5, NULL, 1);
+	xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 8192, NULL, 5, NULL, 1);
 }
