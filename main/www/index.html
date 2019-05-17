@@ -3,17 +3,15 @@
 	<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link rel="stylesheet" type="text/css" href="style.css">
-		<link rel="icon" type="image/x-icon" href="favicon.ico">
 		<script src="script.js"></script>
-		<title>Bedsensor</title>
+		<title>Bedsense</title>
 	</head>
 	<body>
-		<div class="head">
-			Bedsensor
-		</div>
-		
 		<div class="grid">
-			<div>
+			<div class="head">
+				Bedsense
+			</div>
+			<div class="config">
 				<table>
 					<thead>
 						<tr><th colspan="2">WiFi settings</th></tr>
@@ -24,17 +22,27 @@
 							<button onclick="getSSIDList()">Refresh</button>
 						</td></tr>
 						<tr><td>Password</td><td><input type="password" id="pass"></td></tr>
-						<tr><td colspan="2"><button onclick="connect()">Connect</button></td></tr>
+						<tr><td colspan="2"><button onclick="connect()" style="float: right">Connect</button></td></tr>
 					</tbody>
 				</table>
 			</div>
-			<div>
+			<div class="curSsid">
 				<table>
 					<thead>
 						<tr><th colspan="2">Current network configuration</th></tr>
 					</thead>
 					<tbody>
 						<tr><td>SSID</td><td><input type="text" id="curSsid" value="-" disabled></td></tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="mac">
+				<table>
+					<thead>
+						<tr><th colspan="2">Device name</th></tr>
+					</thead>
+					<tbody>
+						<tr><td>MAC address</td><td><input type="text" id="macAddr" value="-" disabled></td></tr>
 					</tbody>
 				</table>
 			</div>

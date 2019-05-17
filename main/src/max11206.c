@@ -120,19 +120,19 @@ void IRAM_ATTR adc_dataReadyIntr(void *params) {
 	adc_clearInterrupt();
 	int32_t val = adc_readData();
 	adc_setInterrupt();
-    xQueueSendFromISR(adcQueue, &val, NULL);
+	xQueueSendFromISR(adcQueue, &val, 0);
 }
 
 /*
 	Task which handles the data placed in the queue by the interrupt routine
 */
 void adc_interruptHandlerTask(void* arg) {
-    int32_t val;
-    for(;;) {
-        if(xQueueReceive(adcQueue, &val, portMAX_DELAY)) {
-            //printf("%d\n", val);
-        }
-    }
+	int32_t val;
+	for(;;) {
+		if(xQueueReceive(adcQueue, &val, portMAX_DELAY)) {
+			printf("%d\n", val);
+		}
+	}
 }
 
 void adc_sendCommand(uint8_t command) {

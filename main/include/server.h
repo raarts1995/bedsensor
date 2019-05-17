@@ -28,6 +28,8 @@ void server_stop();
 char* server_setContentType(char* filename);
 esp_err_t server_getSSIDList(httpd_req_t* req);
 esp_err_t server_getCurrentSSID(httpd_req_t* req);
+esp_err_t server_getMACAddr(httpd_req_t* req);
+esp_err_t server_getInfo(httpd_req_t* req);
 esp_err_t server_connect(httpd_req_t* req);
 esp_err_t server_getWifiState(httpd_req_t* req);
 esp_err_t server_forbidden(httpd_req_t* req);

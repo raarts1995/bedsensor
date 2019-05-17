@@ -6,6 +6,9 @@ sdmmc_card_t* card;
 
 FILE* sd_filePtr;
 
+//Queue for the data from the ADC
+xQueueHandle sdQueue = NULL;
+
 bool sd_mounted = false;
 
 void sd_init() {
@@ -18,6 +21,10 @@ void sd_init() {
 
 	if (gpio_SDCardDetected())
 		sd_mount();
+	
+	//create queue and start task
+	sdQueue = xQueueCreate(10, sizeof(int32_t));
+	xTaskCreatePinnedToCore(&sd_task, "sd task", 1024, NULL, 4, NULL, 1);
 }
 
 esp_err_t sd_mount() {
@@ -136,4 +143,45 @@ void sd_closeFile() {
 
 	fileIO_closeFile(sd_filePtr);
 	sd_filePtr = NULL;
+}
+
+/*
+	Append the given list of integers as CSV to a file
+*/
+void sd_appendCSV(int count, ...) {
+	va_list list;
+	va_start(list, count);
+	char buf[SD_CSV_TEMP_BUF_LEN] = {'\0'};
+	for (int i = 0; i < count; i++) {
+		snprintf(buf, SD_CSV_TEMP_BUF_LEN - 2, "%d", va_arg(list, int)); // -2 for , or \n and \0
+		if (i != (count-1))
+			strcat(buf, ",");
+		else
+			strcat(buf, "\n");
+		sd_appendFile(buf);
+	}
+	va_end(list);
+}
+
+/*
+	Add a new value to the queue
+*/
+void sd_addToQueue(uint32_t val) {
+	if (!xQueueSend(sdQueue, &val, 0))
+		ESP_LOGE(TAG, "Failed to append value to queue");
+}
+
+void sd_task(void *param) {
+	uint32_t val;
+	while (1) {
+		if(xQueueReceive(sdQueue, &val, portMAX_DELAY)) {
+			ESP_LOGI(TAG, "New value from ADC");
+
+			//get latest values from algorithms
+			int heartRate = alg_getHeartRate();
+			int breathingRate = alg_getBreathingRate();
+
+			sd_appendCSV(val, heartRate, breathingRate);
+		}
+	}
 }

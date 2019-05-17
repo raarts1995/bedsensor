@@ -59,7 +59,7 @@ def getAWSCredentials():
 			if (line == ""):
 				break
 
-			print(line)
+			#print(line)
 			if (line.strip().startswith("#")):
 				continue
 
@@ -99,6 +99,7 @@ if (not getAWSCredentials()):
 print("Retrieving MAC address")
 thingName = getMACStr()
 if (thingName == ""):
+	print("    Failed to retrieve MAC address")
 	exit()
 
 if printResponses:

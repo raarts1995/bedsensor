@@ -87,6 +87,22 @@ esp_err_t server_start() {
 	};
 	httpd_register_uri_handler(server, &currentSSID);
 
+	httpd_uri_t getMAC = {
+		.uri = "/getMAC",
+		.method = HTTP_GET,
+		.handler = server_getMACAddr,
+		.user_ctx = NULL
+	};
+	httpd_register_uri_handler(server, &getMAC);
+
+	httpd_uri_t getInfo = {
+		.uri = "/getInfo",
+		.method = HTTP_GET,
+		.handler = server_getInfo,
+		.user_ctx = NULL
+	};
+	httpd_register_uri_handler(server, &getInfo);
+
 	httpd_uri_t connect = {
 		.uri = "/connect",
 		.method = HTTP_GET,
@@ -195,6 +211,32 @@ esp_err_t server_getCurrentSSID(httpd_req_t* req) {
 	else
 		httpd_resp_sendstr(req, ssid);
 	return ESP_OK;
+}
+
+/*
+	Get the MAC address of the ESP32
+*/
+esp_err_t server_getMACAddr(httpd_req_t* req) {
+	server_resetTimer();
+	httpd_resp_sendstr(req, espSystem_getMacAddr());
+	return ESP_OK;
+}
+
+/*
+	Get the currently configured SSID and MAC address in one function
+*/
+esp_err_t server_getInfo(httpd_req_t* req) {
+	server_resetTimer();
+	server_resetTimer();
+	char* ssid = wifi_getStoredSSID();
+	if (strlen(ssid) == 0)
+		httpd_resp_sendstr_chunk(req, "-");
+	else
+		httpd_resp_sendstr_chunk(req, ssid);
+	httpd_resp_sendstr_chunk(req, ",");
+	httpd_resp_sendstr_chunk(req, espSystem_getMacAddr());
+	httpd_resp_sendstr_chunk(req, NULL);
+	return ESP_OK;	
 }
 
 /*

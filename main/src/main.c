@@ -18,6 +18,7 @@
 #include "sd.h"
 #include "spi.h"
 #include "max11206.h"
+#include "algorithms.h"
 
 #define TAG "Main"
 
@@ -40,7 +41,7 @@
 	| 7  | 120           | 100           | 480           | 400           |
 	|----|---------------|---------------|---------------|---------------|
 */
-#define ADC_RATE 6
+#define ADC_RATE 5
 
 #define avgMax 5
 int32_t avgList[avgMax] = {0};
@@ -57,16 +58,11 @@ void app_main() {
 	spi_init();
 	//sd_init();
 	adc_init();
+	alg_init();
+	aws_init();
 	
 	adc_startConversion(ADC_RATE);
 	adc_setInterrupt();
-	
-	/*gpio_attachInterrupt(GPIO_BUTTON, GPIO_PIN_INTR_POSEDGE, gpio_isr);
-	
-    //create a queue to handle gpio event from isr
-    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
-    //start gpio task
-    xTaskCreate(gpioPrint, "gpioPrint", 2048, NULL, 10, NULL);*/
 
 	/*TimerHandle_t tmr = xTimerCreate(
 		"main tmr", //timer name
@@ -78,5 +74,5 @@ void app_main() {
 	if (xTimerStart(tmr, 0) != pdPASS)
 		ESP_LOGE(TAG, "Failed to start timer");*/
 
-	xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 8192, NULL, 5, NULL, 1);
+	
 }

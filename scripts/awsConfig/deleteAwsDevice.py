@@ -26,6 +26,22 @@ awsRegion = ""
 
 bedsensorPolicyName = "bedsensorpolicy"
 
+readMacCmd = "python ${IDF_PATH}/components/esptool_py/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0 read_mac"
+def getMACStr():
+	p = subprocess.Popen(readMacCmd, stdout=subprocess.PIPE, shell=True)
+	out, err = p.communicate()
+	res = out.split('\n')
+	for line in res:
+		if line.find("MAC:") != -1:
+			try:
+				mac = line.split(' ')[1]
+				print(mac)
+				return mac
+			except:
+				print("Index out of range")
+	print("No MAC address found")
+	return ""
+
 def getAWSCredentials():
 	global awsAccessKey, awsSecretKey, awsRegion
 	file = None
@@ -36,7 +52,7 @@ def getAWSCredentials():
 			if (line == ""):
 				break
 
-			print(line)
+			#print(line)
 			if (line.strip().startswith("#")):
 				continue
 
@@ -73,7 +89,14 @@ print("Opening credentials file")
 if (not getAWSCredentials()):
 	exit()
 
-thingName = raw_input("Enter the MAC address: ").lower()
+thingName = raw_input("Enter the MAC address (leave empty to automatically detect connected device): ").lower().strip()
+
+if (thingName == ""):
+	print("Nothing entered\nRetrieving MAC address")
+	thingName = getMACStr()
+	if (thingName == ""):
+		print("    Failed to retrieve MAC address")
+		exit()
 
 if printResponses:
 	print("    " + thingName)

@@ -1,5 +1,5 @@
 window.onload = function() {
-	getCurrentSSID();
+	getInfo();
 };
 
 function getCurrentSSID() {
@@ -7,6 +7,22 @@ function getCurrentSSID() {
 }
 function getCurrentSSIDHandler(data) {
 	document.getElementById("curSsid").value = data;
+}
+
+function getMAC() {
+	sendRequest("getMAC", getMACHandler);
+}
+function getMACHandler(data) {
+	document.getElementById("macAddr").value = data;
+}
+
+function getInfo() {
+	sendRequest("getInfo", getInfoHandler);
+}
+function getInfoHandler(data) {
+	var d = data.split(',');
+	document.getElementById("curSsid").value = d[0];
+	document.getElementById("macAddr").value = d[1];
 }
 
 function getSSIDList() {

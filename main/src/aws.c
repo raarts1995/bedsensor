@@ -4,14 +4,22 @@
 
 AWS_IoT_Client aws_client;
 
+TimerHandle_t awsTimer;
 bool aws_timerBusy;
 
 /*
-	Initialize the AWS IoT client
+	Initialize the AWS IoT client and the upload timer
 	SPIFFS should be initialized before this function is called
 */
 bool aws_init() {
 	aws_timerBusy = false;
+	awsTimer = xTimerCreate(
+		"aws timer", //timer name
+		AWS_UPLOAD_INTERVAL/portTICK_PERIOD_MS, //timer period
+		pdTRUE, //autoreload
+		NULL, //timer ID
+		aws_timerTask //callback function
+	);
 
 	if (!spiffs_fileExists(AWS_ROOT_CERT) || !spiffs_fileExists(AWS_DEVICE_CERT) || !spiffs_fileExists(AWS_PRIVATE_KEY)) {
 		ESP_LOGE(TAG, "AWS certificates unknown");
@@ -39,6 +47,8 @@ bool aws_init() {
 	}
 
 	ESP_LOGI(TAG, "AWS IoT SDK Version: %d.%d.%d-%s", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
+
+	//xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 2048, NULL, 3, NULL, 1);
 
 	return true;
 }
@@ -144,8 +154,34 @@ char* aws_constructPayload() {
 			"\"heartrate\":%d,"
 			"\"breathingrate\":%d"
 		"}",
-	espSystem_getMacAddr(), rtcTime_getTime(), 65, 20);
+		espSystem_getMacAddr(), 
+		rtcTime_getTime(), 
+		65, 
+		20
+	);
 	return payload;
+}
+
+void aws_startTimer() {
+	if (!xTimerIsTimerActive(awsTimer)) {
+		aws_connect();
+		if (!xTimerStart(awsTimer, 0)) {
+			ESP_LOGE(TAG, "Failed to start timer");
+		}
+		else {
+			ESP_LOGI(TAG, "Timer started");
+		}
+	}
+}
+
+void aws_stopTimer() {
+	if (!xTimerStop(awsTimer, 0)) {
+		ESP_LOGE(TAG, "Failed to stop timer");
+	}
+	else {
+		ESP_LOGI(TAG, "Timer stopped");
+	}
+	aws_disconnect();
 }
 
 void aws_testTask(void* param) {
@@ -160,31 +196,12 @@ void aws_testTask(void* param) {
 		vTaskDelay(100/portTICK_PERIOD_MS); //wacht 100ms
 	ESP_LOGI(TAG, "Wifi connected");
 
-	aws_init();
-
 	aws_connect();
-
-	TimerHandle_t tmr = xTimerCreate(
-		"aws timer", //timer name
-		AWS_UPLOAD_INTERVAL/portTICK_PERIOD_MS, //timer period
-		pdTRUE, //autoreload
-		NULL, //timer ID
-		aws_timerTask //callback function
-		);
 
 	while (1) {
 		if (gpio_getButtonState()) {
 			ESP_LOGI(TAG, "Button pressed");
-			if (!xTimerIsTimerActive(tmr)) {
-				ESP_LOGI(TAG, "Starting timer");
-				if (xTimerStart(tmr, 0) != pdPASS) {
-					ESP_LOGE(TAG, "Failed to start aws timer");
-					return false;
-				}
-			}
-			else {
-				ESP_LOGI(TAG, "Timer already started");
-			}
+			aws_startTimer();
 			//aws_timerTask(NULL);
 
 			//wait for button release
