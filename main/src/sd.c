@@ -194,30 +194,27 @@ void sd_closeLogFile() {
 /*
 	Append the given list of integers as CSV to a file
 */
-void sd_appendCSV(int count, ...) {
+void sd_appendCSV(int *buf, int len) {
 	if (!gpio_SDCardDetected() || !sd_mounted)
 		return;
 
-	va_list list;
-	va_start(list, count);
-	char buf[SD_CSV_TEMP_BUF_LEN] = {'\0'};
-	for (int i = 0; i < count; i++) {
-		snprintf(buf, SD_CSV_TEMP_BUF_LEN - 2, "%d", va_arg(list, int)); // -2 for , or \n and \0
-		if (i != (count-1))
-			strcat(buf, ",");
+	char str[SD_CSV_TEMP_BUF_LEN] = {'\0'};
+	for (int i = 0; i < len; i++) {
+		snprintf(str, SD_CSV_TEMP_BUF_LEN - 2, "%d", buf[i]); // -2 for , or \n and \0
+		if (i != (len-1))
+			strcat(str, ",");
 		else
-			strcat(buf, "\n");
+			strcat(str, "\n");
 	}
-	fileIO_writeFile(sd_csvFilePtr, buf);
-	va_end(list);
+	fileIO_writeFile(sd_csvFilePtr, str);
 }
 
-/*void sd_appendLog(char *log) {
+void sd_appendLog(char *log) {
 	if (!gpio_SDCardDetected() || !sd_mounted)
 		return;
 
-	fileIO_writeFile(sd_logFilePtr, data);
-}*/
+	fileIO_writeFile(sd_logFilePtr, log);
+}
 
 /*
 	Add a new value to the queue
@@ -237,10 +234,8 @@ void sd_task(void *param) {
 			ESP_LOGI(TAG, "New value from ADC");
 
 			//get latest values from algorithms
-			int heartRate = alg_getHeartRate();
-			int breathingRate = alg_getBreathingRate();
-
-			sd_appendCSV(val, heartRate, breathingRate);
+			int csvVal[] = {val, alg_getHeartRate(), alg_getBreathingRate()};
+			sd_appendCSV(csvVal, sizeof(csvVal)/sizeof(csvVal[0]));
 		}
 	}
 }

@@ -5,7 +5,6 @@
 #include <string.h>
 #include <sys/unistd.h>
 #include <sys/stat.h>
-#include <stdarg.h>
 
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
@@ -36,9 +35,8 @@ bool sd_openCSVFile();
 bool sd_openLogFile();
 void sd_closeCSVFile();
 void sd_closeLogFile();
-void sd_appendCSV(int count, ...);
+void sd_appendCSV(int *buf, int len);
 void sd_closeFile();
-void sd_appendCSV(int count, ...);
 void sd_addToQueue(uint32_t val);
 void sd_task(void *param);
 
