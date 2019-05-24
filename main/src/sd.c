@@ -4,7 +4,8 @@
 
 sdmmc_card_t* card;
 
-FILE* sd_filePtr;
+FILE* sd_csvFilePtr;
+FILE* sd_logFilePtr;
 
 //Queue for the data from the ADC
 xQueueHandle sdQueue = NULL;
@@ -17,7 +18,8 @@ void sd_init() {
 	gpio_configureSDCardDetect();
 
 	sd_mounted = false;
-	sd_filePtr = NULL;
+	sd_csvFilePtr = NULL;
+	sd_logFilePtr = NULL;
 
 	if (gpio_SDCardDetected())
 		sd_mount();
@@ -61,6 +63,8 @@ esp_err_t sd_mount() {
 	sd_mounted = true;
 
 	sd_printCardInfo();
+	sd_openCSVFile();
+	//sd_openLogFile();
 	return ESP_OK;
 
 }
@@ -68,6 +72,8 @@ esp_err_t sd_mount() {
 void sd_unmount() {
 	if (sd_mounted) {
 		ESP_LOGI(TAG, "Unmounting SD card");
+		sd_closeCSVFile();
+		sd_closeLogFile();
 		ESP_ERROR_CHECK(esp_vfs_fat_sdmmc_unmount());
 		card = NULL;
 		sd_mounted = false;
@@ -108,47 +114,90 @@ size_t sd_getFileSize(char* path) {
 }
 
 /*
-	Opens the requested file
+	Opens a new CSV file
 	Returns true if the file is opened
 			false if the file doesn't exist or opening failed
 */
-bool sd_openFile(char* path) {
+bool sd_openCSVFile() {
 	if (!gpio_SDCardDetected() || !sd_mounted)
 		return false;
 
-	sd_closeFile();
+	sd_closeCSVFile();
+	int nr = 1;
+	char path[32];
+	do {
+		memset(path, '\0', sizeof(path));
+		sprintf(path, "%s(%d).csv", SD_CSV_FILENAME, nr);
+		nr++;
+	}
+	while (fileIO_fileExists(SD_BASEPATH, path));
 
-	sd_filePtr = fileIO_openFile(SD_BASEPATH, path, "a");
+	sd_csvFilePtr = fileIO_openFile(SD_BASEPATH, path, "a");
 
-	if (!sd_filePtr) {
-		ESP_LOGE(TAG, "Failed to open file: %s", path);
+	if (!sd_csvFilePtr) {
+		ESP_LOGE(TAG, "Failed to open csv file: %s", path);
 		return false;
 	}
 	return true;
 }
 
-void sd_appendFile(char* data) {
+/*
+	Opens a new log file
+	Returns true if the file is opened
+			false if the file doesn't exist or opening failed
+*/
+bool sd_openLogFile() {
 	if (!gpio_SDCardDetected() || !sd_mounted)
-		return;
+		return false;
 
-	fileIO_writeFile(sd_filePtr, data);
+	sd_closeLogFile();
+	int nr = 1;
+	char path[32];
+	do {
+		memset(path, '\0', sizeof(path));
+		sprintf(path, "%s(%d).txt", SD_LOG_FILENAME, nr);
+		nr++;
+	}
+	while (fileIO_fileExists(SD_BASEPATH, path));
+
+	sd_logFilePtr = fileIO_openFile(SD_BASEPATH, path, "a");
+
+	if (!sd_logFilePtr) {
+		ESP_LOGE(TAG, "Failed to open log file: %s", path);
+		return false;
+	}
+	return true;
 }
 
 /*
 	Closes the opened file
 */
-void sd_closeFile() {
+void sd_closeCSVFile() {
 	if (!gpio_SDCardDetected() || !sd_mounted)
 		return;
 
-	fileIO_closeFile(sd_filePtr);
-	sd_filePtr = NULL;
+	fileIO_closeFile(sd_csvFilePtr);
+	sd_csvFilePtr = NULL;
+}
+
+/*
+	Closes the opened file
+*/
+void sd_closeLogFile() {
+	if (!gpio_SDCardDetected() || !sd_mounted)
+		return;
+
+	fileIO_closeFile(sd_logFilePtr);
+	sd_logFilePtr = NULL;
 }
 
 /*
 	Append the given list of integers as CSV to a file
 */
 void sd_appendCSV(int count, ...) {
+	if (!gpio_SDCardDetected() || !sd_mounted)
+		return;
+
 	va_list list;
 	va_start(list, count);
 	char buf[SD_CSV_TEMP_BUF_LEN] = {'\0'};
@@ -158,10 +207,17 @@ void sd_appendCSV(int count, ...) {
 			strcat(buf, ",");
 		else
 			strcat(buf, "\n");
-		sd_appendFile(buf);
 	}
+	fileIO_writeFile(sd_csvFilePtr, buf);
 	va_end(list);
 }
+
+/*void sd_appendLog(char *log) {
+	if (!gpio_SDCardDetected() || !sd_mounted)
+		return;
+
+	fileIO_writeFile(sd_logFilePtr, data);
+}*/
 
 /*
 	Add a new value to the queue
@@ -171,6 +227,9 @@ void sd_addToQueue(uint32_t val) {
 		ESP_LOGE(TAG, "Failed to append value to queue");
 }
 
+/*
+	SD card main task
+*/
 void sd_task(void *param) {
 	uint32_t val;
 	while (1) {

@@ -7,6 +7,9 @@
 #include "spi.h"
 #include "gpio.h"
 
+#include "sd.h"
+#include "algorithms.h"
+
 #define ADC_MAX_CLOCK_FREQ 5000000 //5MHz
 
 #define ADC_REG_STAT1 0x00 //8 bit:  status

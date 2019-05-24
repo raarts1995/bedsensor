@@ -13,6 +13,7 @@ xQueueHandle adcQueue = NULL;
 	Initialize the ADC driver
 */
 void adc_init() {
+	ESP_LOGI(TAG, "Inittializing ADC");
 	adc = spi_addDevice(SPI_PIN_NC, 400000, 0); //configure without CS pin
 	gpio_configurePin(GPIO_ADC_CS, GPIO_MODE_INPUT_OUTPUT);
 	gpio_setPin(GPIO_ADC_CS, 1); //strong independent ADC driver, sets CS pin itself
@@ -42,6 +43,7 @@ int32_t adc_measure(uint8_t rate) {
 	Start the conversion
 */
 void adc_startConversion(uint8_t rate) {
+	ESP_LOGI(TAG, "Setting rate %d", rate);
 	adc_sendCommand(rate & 0x07);
 }
 
@@ -130,7 +132,10 @@ void adc_interruptHandlerTask(void* arg) {
 	int32_t val;
 	for(;;) {
 		if(xQueueReceive(adcQueue, &val, portMAX_DELAY)) {
-			printf("%d\n", val);
+			//ESP_LOGI(TAG, "%d", val);
+			//printf("%d\n", val);
+			//sd_addToQueue(val);
+			alg_addToQueue(val);
 		}
 	}
 }
@@ -138,6 +143,7 @@ void adc_interruptHandlerTask(void* arg) {
 void adc_sendCommand(uint8_t command) {
 	//set bit 8, clear bit 7: b10cccccc
 	command = 0x80 | (command & ~(0xC0));
+	ESP_LOGI(TAG, "Writing: 0x%x", command);
 	adc_transfer(adc, &command, 1);
 }
 

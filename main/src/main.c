@@ -22,8 +22,6 @@
 
 #define TAG "Main"
 
-#define SAMPLE_RATE 50 //hz
-
 /*
 	Samples per Second
 	     |-------------------------------|-------------------------------|
@@ -56,7 +54,7 @@ void app_main() {
 	wifi_init();
 	rtcTime_init();
 	spi_init();
-	//sd_init();
+	sd_init();
 	adc_init();
 	alg_init();
 	aws_init();

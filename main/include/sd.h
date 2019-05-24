@@ -21,7 +21,9 @@
 #include "fileIO.h"
 #include "algorithms.h"
 
-#define SD_BASEPATH "/sdcard"
+#define SD_BASEPATH     "/sdcard"
+#define SD_LOG_FILENAME "/log"
+#define SD_CSV_FILENAME "/csv"
 
 #define SD_CSV_TEMP_BUF_LEN 128
 
@@ -30,8 +32,11 @@ esp_err_t sd_mount();
 void sd_unmount();
 void sd_printCardInfo();
 bool sd_fileExists(char* path);
-bool sd_openFile(char* path);
-void sd_appendFile(char* data);
+bool sd_openCSVFile();
+bool sd_openLogFile();
+void sd_closeCSVFile();
+void sd_closeLogFile();
+void sd_appendCSV(int count, ...);
 void sd_closeFile();
 void sd_appendCSV(int count, ...);
 void sd_addToQueue(uint32_t val);
