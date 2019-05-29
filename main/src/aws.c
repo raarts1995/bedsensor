@@ -48,11 +48,15 @@ bool aws_init() {
 
 	ESP_LOGI(TAG, "AWS IoT SDK Version: %d.%d.%d-%s", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
-	//xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 2048, NULL, 3, NULL, 1);
+	xTaskCreatePinnedToCore(&aws_testTask, "aws test task", 4096, NULL, 3, NULL, 1);
 
 	return true;
 }
 
+/*
+	AWS timer task
+	Constructs a payload and sends this to AWS
+*/
 void aws_timerTask(TimerHandle_t tmr) {
 	if (aws_timerBusy) {
 		ESP_LOGE(TAG, "Timer busy...");
@@ -73,6 +77,9 @@ void aws_timerTask(TimerHandle_t tmr) {
 	aws_timerBusy = false;
 }
 
+/*
+	Connect to AWS
+*/
 bool aws_connect() {
 	if (wifi_connectState() != WIFI_STATE_CONNECTED) {
 		ESP_LOGE(TAG, "Wifi not connected");
@@ -97,10 +104,17 @@ bool aws_connect() {
 	return true;
 }
 
+/*
+	Disconnect from AWS
+*/
 void aws_disconnect() {
 	aws_iot_mqtt_disconnect(&aws_client);
 }
 
+/*
+	AWS disconnect callback handler
+	Gets called by the AWS API when it disconnects from AWS
+*/
 void aws_disconnectCallbackHandler(AWS_IoT_Client* client, void* data) {
 	ESP_LOGI(TAG, "AWS disconnected");
 	if (client == NULL)
@@ -120,6 +134,9 @@ void aws_disconnectCallbackHandler(AWS_IoT_Client* client, void* data) {
 	}
 }
 
+/*
+	Send the measurment values to AWS
+*/
 bool aws_sendData() {
 	char* payload = aws_constructPayload();
 	if (payload == NULL)
@@ -143,6 +160,9 @@ bool aws_sendData() {
 	return true;
 }
 
+/*
+	Construct the payload to be sent to AWS
+*/
 char* aws_constructPayload() {
 	char* payload = (char*)malloc(AWS_MAX_PAYLOAD_SIZE*sizeof(char));
 
@@ -156,14 +176,17 @@ char* aws_constructPayload() {
 		"}",
 		espSystem_getMacAddr(), 
 		rtcTime_getTime(), 
-		65, 
-		20
+		alg_getHeartRate(), 
+		alg_getBreathingRate()
 	);
 	return payload;
 }
 
+/*
+	Start the AWS upload timer
+*/
 void aws_startTimer() {
-	if (!xTimerIsTimerActive(awsTimer)) {
+	if (!aws_timerRunning()) {
 		aws_connect();
 		if (!xTimerStart(awsTimer, 0)) {
 			ESP_LOGE(TAG, "Failed to start timer");
@@ -174,6 +197,9 @@ void aws_startTimer() {
 	}
 }
 
+/*
+	Stop the AWS upload timer
+*/
 void aws_stopTimer() {
 	if (!xTimerStop(awsTimer, 0)) {
 		ESP_LOGE(TAG, "Failed to stop timer");
@@ -184,6 +210,18 @@ void aws_stopTimer() {
 	aws_disconnect();
 }
 
+/*
+	Get the running state of the timer
+	Returns true if the timer is running
+			false if not
+*/
+bool aws_timerRunning() {
+	return xTimerIsTimerActive(awsTimer);
+}
+
+/*
+	Test task to test the AWS functionality
+*/
 void aws_testTask(void* param) {
 
 	ESP_LOGI(TAG, "Starting AWS task");
@@ -201,7 +239,14 @@ void aws_testTask(void* param) {
 	while (1) {
 		if (gpio_getButtonState()) {
 			ESP_LOGI(TAG, "Button pressed");
-			aws_startTimer();
+			if (aws_timerRunning()) {
+				ESP_LOGI(TAG, "timer is running -> stopping timer");
+				aws_stopTimer();
+			}
+			else {
+				ESP_LOGI(TAG, "timer is not running -> starting timer");
+				aws_startTimer();
+			}
 			//aws_timerTask(NULL);
 
 			//wait for button release

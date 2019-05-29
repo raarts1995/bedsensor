@@ -23,10 +23,12 @@ void sd_init() {
 
 	if (gpio_SDCardDetected())
 		sd_mount();
+	else
+		ESP_LOGE(TAG, "No SD card inserted");
 	
 	//create queue and start task
 	sdQueue = xQueueCreate(10, sizeof(int32_t));
-	xTaskCreatePinnedToCore(&sd_task, "sd task", 1024, NULL, 4, NULL, 1);
+	xTaskCreatePinnedToCore(&sd_task, "sd task", 2048, NULL, 4, NULL, 1);
 }
 
 esp_err_t sd_mount() {

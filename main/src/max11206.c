@@ -13,7 +13,7 @@ xQueueHandle adcQueue = NULL;
 	Initialize the ADC driver
 */
 void adc_init() {
-	ESP_LOGI(TAG, "Inittializing ADC");
+	ESP_LOGI(TAG, "Initializing ADC");
 	adc = spi_addDevice(SPI_PIN_NC, 400000, 0); //configure without CS pin
 	gpio_configurePin(GPIO_ADC_CS, GPIO_MODE_INPUT_OUTPUT);
 	gpio_setPin(GPIO_ADC_CS, 1); //strong independent ADC driver, sets CS pin itself

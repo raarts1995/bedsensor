@@ -25,7 +25,7 @@ typedef enum {
 	GPIO_SD_MOSI = 23,
 	GPIO_SD_SCK = 18,
 	GPIO_SD_CS = 5,
-	GPIO_SD_CD = 36,
+	GPIO_SD_CD = 21, //36,
 
 	//common SPI bus pins
 	GPIO_MISO = 27,

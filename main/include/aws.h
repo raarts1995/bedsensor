@@ -18,6 +18,7 @@
 #include "spiffs.h"
 #include "rtcTime.h"
 #include "espSystem.h"
+#include "algorithms.h"
 
 #define AWS_ROOT_CERT   "/aws_root_cert.pem"
 #define AWS_DEVICE_CERT "/aws_device_cert.pem.crt"
@@ -43,6 +44,9 @@ void aws_disconnect();
 void aws_disconnectCallbackHandler(AWS_IoT_Client* client, void* data);
 bool aws_sendData();
 char* aws_constructPayload();
+void aws_startTimer();
+void aws_stopTimer();
+bool aws_timerRunning();
 void aws_testTask(void* param);
 
 #endif

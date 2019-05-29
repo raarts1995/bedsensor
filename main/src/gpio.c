@@ -110,7 +110,7 @@ void gpio_configureSDCardDetect() {
 	Detect if an SD card is inserted
 */
 bool gpio_SDCardDetected() {
-	return gpio_getPin(GPIO_SD_CD);
+	return !gpio_getPin(GPIO_SD_CD);
 }
 
 /*
